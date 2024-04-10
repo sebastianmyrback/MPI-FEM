@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/afs/kth.se/home/s/m/smyrback/Documents/courses/SF2568-Parallel/project/src/main.cpp
+iostream
+-
+mesh/mesh.hpp
+/afs/kth.se/home/s/m/smyrback/Documents/courses/SF2568-Parallel/project/src/mesh/mesh.hpp
+mesh/element.hpp
+/afs/kth.se/home/s/m/smyrback/Documents/courses/SF2568-Parallel/project/src/mesh/element.hpp
+
+/afs/kth.se/home/s/m/smyrback/Documents/courses/SF2568-Parallel/project/src/mesh/element.hpp
+array
+-
+fstream
+-
+
+/afs/kth.se/home/s/m/smyrback/Documents/courses/SF2568-Parallel/project/src/mesh/mesh.hpp
+vector
+-
+string
+-
+element.hpp
+/afs/kth.se/home/s/m/smyrback/Documents/courses/SF2568-Parallel/project/src/mesh/element.hpp
+
