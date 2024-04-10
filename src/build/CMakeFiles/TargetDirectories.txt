@@ -1,0 +1,3 @@
+/Users/sebastianmyrback/Documents/doktorandprojekt/kurser/SF2568_Parallel_Computations_for_Large-Scale_Problems/project-git/src/build/CMakeFiles/main.dir
+/Users/sebastianmyrback/Documents/doktorandprojekt/kurser/SF2568_Parallel_Computations_for_Large-Scale_Problems/project-git/src/build/CMakeFiles/edit_cache.dir
+/Users/sebastianmyrback/Documents/doktorandprojekt/kurser/SF2568_Parallel_Computations_for_Large-Scale_Problems/project-git/src/build/CMakeFiles/rebuild_cache.dir
