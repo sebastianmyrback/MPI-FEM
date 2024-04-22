@@ -8,55 +8,39 @@
 
 class Mesh {
 
-    typedef Element::Vertex Vertex;
-    typedef Element::Edge Edge;
 
     public:
 
-        // Constructor
         Mesh();
-        // Constructor
         Mesh(int nx, int ny, double x0, double y0, double lx, double ly);
-        // Destructor
-        ~Mesh();
-        // Get the number of elements
-        int get_n_elements();
-        // Get the number of nodes
-        int get_n_nodes();
+        ~Mesh() {};
 
-        // Get the nodes
+        int get_n_elements() const {return n_elements;}
+        int get_n_vertices() const {return n_vertices;}
+        int get_n_be() const {return n_be; }
+
         std::vector<Vertex> get_nodes();
-        // Get the elements
         std::vector<Element> get_elements();
-        // Get the nodes of an element
         std::vector<Vertex> get_element_nodes(int element_id);
 
+        const Vertex &get_vertex(int i) const {return vertices.at(i);}
+        const Element &get_element(int i) const {return elements.at(i);}
+        const Edge &get_border_element(int i) const {return borderelements.at(i);}
+        
     private:
         
-        // Number of vertices
-        int n_vertices;
-        // Number of elements
-        int n_elements;
-        // Number of border elements
-        int n_be;
-        // Number of nodes in the x direction
-        int nx;
-        // Number of nodes in the y direction
-        int ny;
-        // x0 value
-        double x0;
-        // y0 value
-        double y0;
-        // lx value
-        double lx;
-        // ly value
-        double ly;
-        // Nodes
+        int n_vertices = 0;
+        int n_elements = 0;
+        int n_be = 0;
+        
+        int nx, ny;
+        double x0, y0;
+        double lx, ly;
+        
         std::vector<Vertex> vertices;
-        // Elements
         std::vector<Element> elements;
-        // Border elements
         std::vector<Edge> borderelements;
+
 
 };
 
