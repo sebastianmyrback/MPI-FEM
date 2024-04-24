@@ -32,5 +32,6 @@ int main() {
     assert(BE.get_vertex(1)[0] == 2.);
     assert(BE.get_vertex(1)[1] == 1.);
 
+
     return 0;
 }
