@@ -1,17 +1,14 @@
 #ifndef MESH_HPP
 #define MESH_HPP
 
-#include <fstream>
 #include <vector>
 #include <array>
-#include <numeric>
-#include <cmath>
 #include <memory>
+#include <iostream>
 
 template<int d>
 struct Rd {
     std::vector<double> x;
-
 
     // Default constructor
     Rd() : x(d, 0.0) {}
@@ -118,25 +115,12 @@ template<int d>
 struct element {
 
     // Quadrilateral elements have 2^d nodes
-    static const int n_vertices = std::pow(2, d);
+    static const int n_vertices = 1 << d;
 
     // Pointer to the vertices of the element
     std::vector<std::shared_ptr<vertex<d>>> elem_vertices;
 
     const vertex<d> & operator()(int i) const {return *(elem_vertices.at(i));}
-
-    // double measure() const {
-    //     // This implementation only works for 1D and 2D 
-    //     // regular quadrilaterals
-
-    //     double mes = *(vertices[1])[0] - *(vertices[0])[0];   // base
-        
-    //     for (int i = 1; i < d; i++) {
-    //         mes * (*(vertices[2])[1] - *(vertices[1])[1]);    // height
-    //     }
-
-    //     return mes;
-    // }
 
     double measure;
 
@@ -146,18 +130,21 @@ struct element {
 class mesh1d {
 public :
     
+    typedef vertex<1> vertex;
+    typedef element<1> element;
+    typedef Rd<1> Rd;
+
     static const int D = 1;
 
     int nv, nk;                     // number of nodes and elements
     double h;                       // typical mesh size
-    std::vector<vertex<1>> mesh_vertices;        // array of vertices
-    std::vector<element<1>> elements;        // array of elements
+    std::vector<vertex> mesh_vertices;        // array of vertices
+    std::vector<element> elements;        // array of elements
 
     mesh1d(double a, double b, int N);
 
-    const vertex<1> & operator()(int i) const {return mesh_vertices.at(i);} 
-    const element<1> & operator[](int i) const {return elements.at(i);}
-    // 
+    const vertex & operator()(int i) const {return mesh_vertices.at(i);} 
+    const element & operator[](int i) const {return elements.at(i);} 
 
     //void build_mesh(double a, double b, int N);
   
@@ -166,15 +153,15 @@ public :
 
 class mesh2d {
 public :
-  typedef vertex<2> V;
-  typedef element<2> K;
+  typedef vertex<2> vertex;
+  typedef element<2> element;
 
   static const int D = 2;
   
   int nv, nt;
   double area;
-  std::vector<V> vertices;        // array of vertices
-  std::vector<K> elements;        // array of elements
+  std::vector<vertex> vertices;        // array of vertices
+  std::vector<element> elements;        // array of elements
   
   //void BuildMesh(double a, double b, int N);
   

@@ -1,9 +1,7 @@
-
-// create a file that will be used to test the library
 #include <iostream>
-//#include "visualization/gnuplot.hpp"
 #include "mesh.hpp"
 #include <assert.h>
+#include "finite_element.hpp"
 
 int main() {
     
@@ -18,6 +16,7 @@ int main() {
     }
     std::cout << "\n";
 
+    std::cout << Th[0].n_vertices << std::endl;
 
     for (int i=0; i<Th.nk; i++) {
         //std::cout << *(Th.elements[i].elem_vertices[0]) << " ";
