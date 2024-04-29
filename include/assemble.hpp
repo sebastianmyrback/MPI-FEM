@@ -5,92 +5,34 @@
 #ifndef ASSEMBLE_HPP
 #define ASSEMBLE_HPP
 
-#include <iostream>
-#include <vector>
-#include <assert.h>
-#include <cmath>
-
+#include <map>
 #include "mesh.hpp"
-#include "CG.hpp"
-#include "Lagrange.hpp"
+#include "lagrange.hpp"
+#include "quadrature.hpp"
 
-// Assemble the stiffness matrix
-// A is a square matrix of size n x n
-// A is stored as a 1D array of size n*n
-// A[i*n + j] is the element in the ith row and jth column
+template <typename mesh>
+class problem {
 
-// The function returns the number of iterations
-// The function modifies the matrix A
+    typedef std::map<std::pair<int, int>, double> matrix;
 
-template <typename mesh_t>
-int assemble_stiffness_matrix(double *A, mesh_t &Th) {
-    
-    const int d = Th.D;
-    typedef finite_element<d> FiniteElement;
-    
-    // Get the number of vertices
-    int n = Th.nv;
+public:
 
-    // Get the number of elements
-    int ne = Th.nk;
+    matrix mat;              // System matrix 
 
-    // Get the degree of the finite element
-    int deg = P1Lagrange1D::deg;
+    std::vector<double> rhs; // Right hand side vector
 
-    // Get the number of degrees of freedom
-    int ndof = P1Lagrange1D::ndof;
+    const int thread_count;  // Number of threads to use
 
-    // Initialize the stiffness matrix
-    for (int i = 0; i < n*n; i++) {
-        A[i] = 0.0;
-    }
+    const int n_dofs;        // Number of degrees of freedom
 
-    // Loop over the elements
-    for (int k = 0; k < ne; k++) {
-        // Get the element
-        element<1> &elem = Th[k];
+    problem(const int thread_count) : thread_count(thread_count), n_dofs(0) {}
 
-        // Get the vertices of the element
-        vertex &v0 = elem(0);
-        vertex &v1 = elem(1);
+    void assemble_FEM_matrix(const mesh & Th, const p1_lagrange_1d & Vh, const double alpha, const double beta);
 
-        // Get the coordinates of the vertices
-        double x0 = v0.x;
-        double x1 = v1.x;
+};
 
-        // Get the length of the element
-        double h = x1 - x0;
 
-        // Get the quadrature points and weights
-        QuadratureFormula<d> quad;
 
-        std::vector<double> q = {0.5};
-        std::vector<double> w = {1.0};
-
-        // Loop over the quadrature points
-        for (int q = 0; q < 1; q++) {
-            // Get the quadrature point
-            double x = 0.5*(x0 + x1) + 0.5*h*q;
-
-            // Evaluate the basis functions
-            std::vector<double> phi;
-            P1Lagrange1D::eval(x, phi);
-
-            // Evaluate the derivatives of the basis functions
-            std::vector<double> dphi;
-            P1Lagrange1D::eval_d(x, dphi);
-
-            // Loop over the degrees of freedom
-            for (int i = 0; i < ndof; i++) {
-                for (int j = 0; j < ndof; j++) {
-                    A[elem(i)*n + elem(j)] += h*w[q]*dphi[i]*dphi[j];
-                }
-            }
-        }
-    }
-
-    return 0;
-}
-
+#include "../src/assemble.tpp"
 
 #endif

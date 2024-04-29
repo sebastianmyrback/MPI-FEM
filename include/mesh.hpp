@@ -13,6 +13,8 @@ struct Rd {
     // Default constructor
     Rd() : x(d, 0.0) {}
 
+    Rd(const double &s) : x(d, s) {}
+
     // Constructor that takes a std::vector as an argument
     Rd(const std::vector<double>& v) {
         if (v.size() != d) {
@@ -97,17 +99,20 @@ struct Rd {
 };
 
 template<int d>
-struct vertex : public Rd<d> {
+struct vertex{
+    
+    Rd<d> x;                      // coordinates
+    
     int vertex_label, idx;      // label and index
 
-    // Default constructor
-    vertex() : Rd<d>(), vertex_label(0) {}
+    // // Default constructor
+    // vertex() : Rd<d>(), vertex_label(0) {}
 
-    // Constructor that takes a double as an argument
-    vertex(const double &s) : Rd<d>(std::vector<double>(d, s)), vertex_label(0) {}
+    // // Constructor that takes a double as an argument
+    // vertex(const double &s) : Rd<d>(std::vector<double>(d, s)), vertex_label(0) {}
 
-    // Constructor that takes an Rd and an int as arguments
-    vertex(const Rd<d> &P, int r = 0) : Rd<d>(P), vertex_label(r) {}
+    // // Constructor that takes an Rd and an int as arguments
+    // vertex(const Rd<d> &P, int r = 0) : Rd<d>(P), vertex_label(r) {}
 
 };
 
@@ -117,7 +122,7 @@ struct element {
     // Quadrilateral elements have 2^d nodes
     static const int n_vertices = 1 << d;
 
-    // Pointer to the vertices of the element
+    // Pointers to the vertices of the element
     std::vector<std::shared_ptr<vertex<d>>> elem_vertices;
 
     const vertex<d> & operator()(int i) const {return *(elem_vertices.at(i));}
@@ -127,19 +132,37 @@ struct element {
 };
 
 
-class mesh1d {
+template<int d>
+class mesh {
+
+public:
+    
+        typedef vertex<d> vert;
+        typedef element<d> elem;
+        typedef Rd<d> Rn;
+        static const int D = d;
+
+        int nv, nk;                     // number of nodes and elements
+        double h;                       // typical mesh size
+        std::vector<vert> mesh_vertices;        // array of vertices
+        std::vector<elem> elements;        // array of elements
+    
+        mesh() : nv(0), nk(0) {}
+    
+        const vert & operator()(int i) const {return mesh_vertices.at(i);} 
+        const elem & operator[](int i) const {return elements.at(i);} 
+    
+        //void build_mesh(double a, double b, int N);
+
+};
+
+
+class mesh1d : public mesh<1> {
 public :
     
-    typedef vertex<1> vert;
-    typedef element<1> elem;
-    typedef Rd<1> Rn;
-
-    static const int D = 1;
-
-    int nv, nk;                     // number of nodes and elements
-    double h;                       // typical mesh size
-    std::vector<vert> mesh_vertices;        // array of vertices
-    std::vector<elem> elements;        // array of elements
+    typedef mesh<1>::vert vert;
+    typedef mesh<1>::elem elem;
+    typedef mesh<1>::Rn Rn;
 
     mesh1d(double a, double b, int N);
 

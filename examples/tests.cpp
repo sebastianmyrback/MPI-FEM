@@ -33,5 +33,25 @@ int main() {
     assert(BE.get_vertex(1)[1] == 1.);
 
 
+        // Create a mesh object
+    int n = 10;     // number of elements
+    double a = 0.0, b = 1.0;
+
+    mesh1d Th(a, b, n);
+
+    for (int i=0; i<Th.nv; i++) {
+        std::cout << Th(i).x << " ";
+    }
+    std::cout << "\n";
+
+    std::cout << Th[0].n_vertices << std::endl;
+
+    for (int i=0; i<Th.nk; i++) {
+        //std::cout << *(Th.elements[i].elem_vertices[0]) << " ";
+        std::cout << (Th[i](0)).x << " ";
+    }
+    std::cout << "\n";
+
+
     return 0;
 }
