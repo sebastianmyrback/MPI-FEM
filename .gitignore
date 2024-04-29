@@ -31,6 +31,11 @@
 *.out
 *.app
 
+
+*.pdf
+*.json
+
+
 src/build/
 build/
 

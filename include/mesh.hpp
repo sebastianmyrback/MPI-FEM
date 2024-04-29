@@ -130,21 +130,21 @@ struct element {
 class mesh1d {
 public :
     
-    typedef vertex<1> vertex;
-    typedef element<1> element;
-    typedef Rd<1> Rd;
+    typedef vertex<1> vert;
+    typedef element<1> elem;
+    typedef Rd<1> Rn;
 
     static const int D = 1;
 
     int nv, nk;                     // number of nodes and elements
     double h;                       // typical mesh size
-    std::vector<vertex> mesh_vertices;        // array of vertices
-    std::vector<element> elements;        // array of elements
+    std::vector<vert> mesh_vertices;        // array of vertices
+    std::vector<elem> elements;        // array of elements
 
     mesh1d(double a, double b, int N);
 
-    const vertex & operator()(int i) const {return mesh_vertices.at(i);} 
-    const element & operator[](int i) const {return elements.at(i);} 
+    const vert & operator()(int i) const {return mesh_vertices.at(i);} 
+    const elem & operator[](int i) const {return elements.at(i);} 
 
     //void build_mesh(double a, double b, int N);
   
@@ -153,15 +153,15 @@ public :
 
 class mesh2d {
 public :
-  typedef vertex<2> vertex;
-  typedef element<2> element;
+  typedef vertex<2> vert;
+  typedef element<2> elem;
 
   static const int D = 2;
   
   int nv, nt;
   double area;
-  std::vector<vertex> vertices;        // array of vertices
-  std::vector<element> elements;        // array of elements
+  std::vector<vert> vertices;        // array of vertices
+  std::vector<elem> elements;        // array of elements
   
   //void BuildMesh(double a, double b, int N);
   

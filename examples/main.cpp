@@ -1,7 +1,7 @@
 #include <iostream>
 #include "mesh.hpp"
 #include <assert.h>
-#include "finite_element.hpp"
+#include "fe.hpp"
 
 int main() {
     

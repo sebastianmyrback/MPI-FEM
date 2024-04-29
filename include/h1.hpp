@@ -8,7 +8,7 @@
 
 #include "mesh.hpp"
 
-class P1Lagrange1D {
+class h1_1d {
     typedef element<1> FE;
 
 public:
@@ -16,13 +16,13 @@ public:
     static const int ndof = 2;
     static const int deg = 1;
 
-    P1Lagrange1D() {}
+    h1_1d() {}
 
     void eval(const double &x, std::vector<double> &phi) const;
 
     void eval_d(const double &x, std::vector<double> &dphi) const;
 
-    ~P1Lagrange1D() {}
+    ~h1_1d() {}
 
 
 };
