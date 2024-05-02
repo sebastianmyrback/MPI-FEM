@@ -5,6 +5,7 @@
 #include <array>
 #include <memory>
 #include <iostream>
+#include <assert.h>
 
 template<int d>
 struct Rd {
@@ -103,16 +104,7 @@ struct vertex{
     
     Rd<d> x;                      // coordinates
     
-    int vertex_label, idx;      // label and index
-
-    // // Default constructor
-    // vertex() : Rd<d>(), vertex_label(0) {}
-
-    // // Constructor that takes a double as an argument
-    // vertex(const double &s) : Rd<d>(std::vector<double>(d, s)), vertex_label(0) {}
-
-    // // Constructor that takes an Rd and an int as arguments
-    // vertex(const Rd<d> &P, int r = 0) : Rd<d>(P), vertex_label(r) {}
+    int vertex_label, glb_idx;      // label and index
 
 };
 

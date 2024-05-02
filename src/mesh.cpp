@@ -19,7 +19,7 @@ mesh1d::mesh1d(double a, double b, int n) {
     for (int i = 0; i < nv; i++) {
         const Rn x(a + i*h);  // x coordinate
         (this->mesh_vertices)[i].x = x;
-        (this->mesh_vertices)[i].idx = i;
+        (this->mesh_vertices)[i].glb_idx = i;
         (this->mesh_vertices)[i].vertex_label = 0;
     }
 

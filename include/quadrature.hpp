@@ -3,6 +3,8 @@
 
 #include "mesh.hpp"
 
+
+
 template<int d>
 class QuadraturePoint {
 public:
@@ -36,29 +38,29 @@ public:
 
 };
 
-typedef QuadratureRule<1> QuadratureRule1D;
-extern const QuadratureRule1D Trapezoidal1D;
+// typedef QuadratureRule<1> QuadratureRule1D;
+// extern const QuadratureRule1D Trapezoidal1D;
 
 
-struct Quadrature1D {
-    typedef QuadratureRule1D QuadratureRule;
+// struct Quadrature1D {
+//     typedef QuadratureRule1D QuadratureRule;
     
-    const QuadratureRule &set_quadrature_rule(const std::string &rule) {
-        if (rule == "trapezoidal") {
-            return Trapezoidal1D;
-        }
-        else return Trapezoidal1D;
-    }   
+//     const QuadratureRule &set_quadrature_rule(const std::string &rule) {
+//         if (rule == "trapezoidal") {
+//             return Trapezoidal1D;
+//         }
+//         else return Trapezoidal1D;
+//     }   
 
-};
+// };
 
 
 
-template<int dim> struct TypeQuadrature {};
-template<> struct TypeQuadrature<1> {
-    typedef Quadrature1D Quadrature;
-    typedef QuadraturePoint<1> QP;    
-};
+// template<int dim> struct TypeQuadrature {};
+// template<> struct TypeQuadrature<1> {
+//     typedef Quadrature1D Quadrature;
+//     typedef QuadraturePoint<1> QP;    
+// };
 
 
 #endif // QUADRATURE_HPP

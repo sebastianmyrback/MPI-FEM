@@ -1,9 +1,5 @@
-// Write assembly routines for the stiffness matrix
-
-// Path: src/fem/Assemble.hpp
-
-#ifndef ASSEMBLE_HPP
-#define ASSEMBLE_HPP
+#ifndef PROBLEM_HPP
+#define PROBLEM_HPP
 
 #include <map>
 #include "mesh.hpp"
@@ -27,12 +23,13 @@ public:
 
     problem(const int thread_count) : thread_count(thread_count), n_dofs(0) {}
 
-    void assemble_FEM_matrix(const mesh & Th, const p1_lagrange_1d & Vh, const double alpha, const double beta);
+    template <int d, int degree>
+    void assemble_FEM_matrix(const mesh & Th, const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const double alpha, const double beta);
 
 };
 
 
 
-#include "../src/assemble.tpp"
+#include "../src/problem.tpp"
 
 #endif

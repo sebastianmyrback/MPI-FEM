@@ -8,24 +8,47 @@
 
 #include "mesh.hpp"
 
-// P1 Lagrange 1D
-class p1_lagrange_1d {
-    typedef element<1> FE;
+template <int dim, int degree>
+class basis_function {
 
 public:
-    static const int D    = 1;
-    static const int ndof = 2;
-    static const int deg  = 1;
 
+    typedef element<dim> FE;
+    typedef Rd<dim> Rn;
 
-    p1_lagrange_1d() {}
+    static const int D    = dim;        // space dimension
+    static const int deg  = degree;     // polynomial degree
 
-    void eval(const Rd<1> &x, std::vector<double> &phi) const;
+    int ndof;                           // number of degrees of freedom per element
+    
+    basis_function() {ndof = 0;}
+
+    virtual void eval(const Rd<dim> &x, std::vector<double> &phi) const = 0;
 
     // dphi is a matrix of size ndof x D
-    void eval_d(const FE &K, const Rd<1> &x, std::vector<std::vector<double>> &dphi) const;
+    virtual void eval_d(const FE &K, const Rn &x, std::vector<std::vector<double>> &dphi) const = 0;
 
-    ~p1_lagrange_1d() {}
+    ~basis_function() {}
+
+};
+
+// P1 Lagrange 1D
+template <int degree>
+class lagrange_1d : public basis_function<1, degree> {
+
+    typedef typename basis_function<1, degree>::FE FE;
+    typedef typename basis_function<1, degree>::Rn Rn;
+
+public:
+    
+    lagrange_1d() : basis_function<1, degree>() {this->ndof = degree + 1;}
+
+    void eval(const Rn &x, std::vector<double> &phi) const override;
+
+    // dphi is a matrix of size ndof x D
+    void eval_d(const FE &K, const Rn &x, std::vector<std::vector<double>> &dphi) const override;
+
+    ~lagrange_1d() {}
 
 
 };

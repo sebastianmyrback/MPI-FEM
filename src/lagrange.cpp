@@ -1,22 +1,25 @@
 #include "lagrange.hpp"
+template<int degree>
+void lagrange_1d<degree>::eval(const Rn &x, std::vector<double> &phi) const {
+    // x - quadrature point in reference element 
 
-void p1_lagrange_1d::eval(const Rd<1> &x, std::vector<double> &phi) const {
-    // x - quadrature point in physical element 
-
-    phi.resize(ndof);
+    phi.resize(this->ndof);
     phi[0] = 1.0 - x[0];
     phi[1] = x[0];
 };
 
-void p1_lagrange_1d::eval_d(const FE &K, const Rd<1> &x, std::vector<std::vector<double>> &dphi) const {
-    // x - quadrature point in physical element K 
-    // dphi is a matrix of size ndof x D
+template<int degree>
+void lagrange_1d<degree>::eval_d(const FE &K, const Rn &x, std::vector<std::vector<double>> &dphi) const {
+    // K - physical element
+    // x - quadrature point in reference element
+    // dphi - matrix of size ndof x D holding the derivatives of the basis functions
 
-    dphi.resize(ndof);
+    assert(dphi.size() == this->ndof);
+    assert(dphi[0].size() == 1);
 
     const std::vector<double> vertices = {K(0).x[0], K(1).x[0]};
 
-    for (int i=0; i<ndof; i++) {
+    for (int i = 0; i < this->ndof; i++) {
         int i1 = (i+1)%2;
         dphi[i][0] = 1. / (vertices[i] - vertices[i1]);
     }
