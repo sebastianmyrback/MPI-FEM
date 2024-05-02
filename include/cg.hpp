@@ -2,71 +2,49 @@
 #define GC_HPP
 #include <assert.h>
 #include <iostream>
+#include <vector>
+#include <map>
 
-// Implement the conjugate gradient method
-// A is a square matrix of size n x n
-// b is a vector of size n
-// x is a vector of size n
+// Implement the CG method for solving the linear system Ax = b where A is an std::map<std::pair<int, int>, double>
+// and x, b are std::vector<double>
+std::vector<double> cg(const std::map<std::pair<int, int>, double> &A, const std::vector<double> &b, const int max_iter, const double tol) {
+    
+    const int n = b.size();
 
-// A is a symmetric positive definite matrix
-// A is stored as a 1D array of size n*n
-// A[i*n + j] is the element in the ith row and jth column
+    std::vector<double> x(n, 0.0);  // x0 = 0
+    std::vector<double> r = b;      // r0 = b - Ax0 = b
+    std::vector<double> p = r;      // p0 = r0
+    std::vector<double> Ap(n, 0.0);
+    double alpha = 0., beta = 0., r_dot_r = 0., r_dot_r_new = 0.;
 
-// b is stored as a 1D array of size n
-// b[i] is the ith element of the vector b
-
-// x is stored as a 1D array of size n
-// x[i] is the ith element of the vector x
-
-// The function returns the number of iterations
-// The function modifies the vector x
-
-int CG(double *A, double *b, double *x, int n) {
-    // Initialize the residual
-    double *r = new double[n];
-    double *p = new double[n];
-    double *Ap = new double[n];
-    double alpha, beta, r_dot_r, r_dot_r_new;
-
-    // r = b - A*x
-    for (int i = 0; i < n; i++) {
-        r[i] = b[i];
-        for (int j = 0; j < n; j++) {
-            r[i] -= A[i*n + j] * x[j];
-        }
-        p[i] = r[i];
-    }
-
-    r_dot_r = 0.0;
-    for (int i = 0; i < n; i++) {
-        r_dot_r += r[i] * r[i];
-    }
-
-    int max_iter = 1000;
-    int iter = 0;
-    while (iter < max_iter) {
-        // Ap = A*p
+    for (int k = 0; k < max_iter; k++) {
+        
+        // Compute r^T*r
         for (int i = 0; i < n; i++) {
-            Ap[i] = 0.0;
-            for (int j = 0; j < n; j++) {
-                Ap[i] += A[i*n + j] * p[j];
-            }
+            r_dot_r += r[i] * r[i];
         }
 
-        // alpha = r_dot_r / p_dot_Ap
+        // Compute A*pk
+        Ap.assign(n, 0.0);
+        for (auto & [indices, value] : A) {
+            int row = indices.first;
+            int col = indices.second;
+
+            Ap[row] += value * p[col];
+        }
+
+        // Compute pk^T*(A*pk)
         double p_dot_Ap = 0.0;
         for (int i = 0; i < n; i++) {
             p_dot_Ap += p[i] * Ap[i];
         }
+
         alpha = r_dot_r / p_dot_Ap;
 
-        // x = x + alpha*p
+
+        // Update x and r
         for (int i = 0; i < n; i++) {
             x[i] += alpha * p[i];
-        }
-
-        // r = r - alpha*Ap
-        for (int i = 0; i < n; i++) {
             r[i] -= alpha * Ap[i];
         }
 
@@ -75,28 +53,23 @@ int CG(double *A, double *b, double *x, int n) {
             r_dot_r_new += r[i] * r[i];
         }
 
-        if (r_dot_r_new < 1e-10) {
-            break;
+        if (r_dot_r_new < tol) {
+            std::cout << "Converged after " << k + 1 << " iterations\n";
+            return x;
         }
 
-        // beta = r_dot_r_new / r_dot_r
         beta = r_dot_r_new / r_dot_r;
-        r_dot_r = r_dot_r_new;
 
-        // p = r + beta*p
+        // Update search direction p
         for (int i = 0; i < n; i++) {
             p[i] = r[i] + beta * p[i];
         }
 
-        iter++;
+        r_dot_r = r_dot_r_new;
+
     }
 
-    delete[] r;
-    delete[] p;
-    delete[] Ap;
+    return x;
 
-    return iter;
 }
-
-
 #endif

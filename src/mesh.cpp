@@ -8,20 +8,26 @@ mesh1d::mesh1d(double a, double b, int n) {
     // n-1 = number of elements
 
     this->nv = n+1;
-    nk = n;
+    this->nk = n;
 
     h = (b - a) / (nk);
 
+    this->mesh_vertices.clear();
+    this->elements.clear();
     this->mesh_vertices.resize(nv);
     this->elements.resize(nk);
 
     // Create vertices
     for (int i = 0; i < nv; i++) {
         const Rn x(a + i*h);  // x coordinate
-        (this->mesh_vertices)[i].x = x;
-        (this->mesh_vertices)[i].glb_idx = i;
+        (this->mesh_vertices)[i].x            = x;
+        (this->mesh_vertices)[i].glb_idx      = i;
         (this->mesh_vertices)[i].vertex_label = 0;
     }
+
+    // Mark the boundary vertices
+    (this->mesh_vertices)[0].vertex_label    = 1;
+    (this->mesh_vertices)[nv-1].vertex_label = 1;
 
     // Create elements
     for (int i = 0; i < nk; i++) {
@@ -32,9 +38,7 @@ mesh1d::mesh1d(double a, double b, int n) {
         (this->elements)[i].measure = h;
     }
 
-    // Mark the boundary vertices
-    (this->mesh_vertices)[0].vertex_label = 1;
-    (this->mesh_vertices)[nv-1].vertex_label = 2;
+
 
     return;
 };

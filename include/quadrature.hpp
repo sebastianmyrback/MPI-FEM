@@ -21,8 +21,8 @@ class QuadratureRule {
 
 public:
     
-    typedef QuadraturePoint<d> QP;
-    const int n;    // number of integratio points
+    typedef QuadraturePoint<d> QP;      
+    const int n;                        // number of quadrature points
     
 private:
     
@@ -34,33 +34,14 @@ public:
         assert(n == qpoints.size());
     }
     
-    const QP & operator[](int i) const {return points.at(i);}
+    const QP & operator[](int i) const {
+        if (i >= n) {
+            std::cerr << "QuadratureRule: index out of bounds" << std::endl;
+            exit(1);
+        }
+        return points[i];
+    }
 
 };
-
-// typedef QuadratureRule<1> QuadratureRule1D;
-// extern const QuadratureRule1D Trapezoidal1D;
-
-
-// struct Quadrature1D {
-//     typedef QuadratureRule1D QuadratureRule;
-    
-//     const QuadratureRule &set_quadrature_rule(const std::string &rule) {
-//         if (rule == "trapezoidal") {
-//             return Trapezoidal1D;
-//         }
-//         else return Trapezoidal1D;
-//     }   
-
-// };
-
-
-
-// template<int dim> struct TypeQuadrature {};
-// template<> struct TypeQuadrature<1> {
-//     typedef Quadrature1D Quadrature;
-//     typedef QuadraturePoint<1> QP;    
-// };
-
 
 #endif // QUADRATURE_HPP

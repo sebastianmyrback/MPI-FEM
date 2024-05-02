@@ -109,7 +109,7 @@ struct vertex{
 };
 
 template<int d>
-struct element {
+struct base_element {
 
     // Quadrilateral elements have 2^d nodes
     static const int n_vertices = 1 << d;
@@ -121,8 +121,27 @@ struct element {
 
     double measure;
 
+    virtual void operator()(const Rd<d> &xref, Rd<d> &x) const = 0;
+
 };
 
+// Template specialization for element
+
+template<int d>
+struct element : public base_element<d> {
+    element() {assert(false);}
+};
+
+template<>
+struct element<1> : public base_element<1> {
+    element() {
+        elem_vertices.resize(2);
+    }
+
+    void operator()(const Rd<1> &xref, Rd<1> &x) const {
+        x = elem_vertices[0]->x * (1.0 - xref[0]) + elem_vertices[1]->x * xref[0];
+    }
+};
 
 template<int d>
 class mesh {
