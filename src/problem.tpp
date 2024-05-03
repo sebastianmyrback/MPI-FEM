@@ -121,8 +121,10 @@ template <typename mesh>
 void problem<mesh>::set_dirichlet(const mesh & Th, const std::function<double(const typename mesh::Rn &)> & g) {
 
     for (int i = 0; i < Th.nv; i++) {
-        if (Th.mesh_vertices[i].vertex_label == 1) {
+        if (Th.mesh_vertices[i].vertex_label != 0) {
             rhs[i] = g(Th.mesh_vertices[i].x);
+
+            std::cout << rhs[i] << std::endl;
 
             // Zero out the row and column corresponding to the Dirichlet boundary
             for (auto & [key, value] : mat) {

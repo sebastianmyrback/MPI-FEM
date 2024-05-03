@@ -9,22 +9,22 @@ namespace plt = matplotlibcpp;
 
 // define a function to be used as a source term f(x) = 8*pi^2*sin(2*pi*x)
 double f(const Rd<1> & x) {
-    return 8.0 * M_PI * M_PI * sin(2.0 * M_PI * x[0]);
-    //return (M_PI*M_PI*(361*cos((19*M_PI*x[0])/10) - 441*cos((21*M_PI*x[0])/10)))/100;
+    //return 8.0 * M_PI * M_PI * sin(2.0 * M_PI * x[0]);
+    return (M_PI*M_PI*(361*cos((19*M_PI*x[0])/10) - 441*cos((21*M_PI*x[0])/10)))/100;
 }
 
 double u(const Rd<1> & x) {
-    return 2*sin(2.0 * M_PI * x[0]);
-    //return 2*sin(2*M_PI*x[0])*sin(M_PI*x[0]/10);
+    //return 2*sin(2.0 * M_PI * x[0]);
+    return 2*sin(2*M_PI*x[0])*sin(M_PI*x[0]/10);
 }
 
 int main() {
     
     // Create a mesh object
-    const int n_refinements = 7;
-    int n = 10;     // number of elements
+    const int n_refinements = 4;
+    int n = 7;     // number of elements
     const int n_threads = 1;
-    const double a = 0., b = 1.0;
+    const double a = -1, b = 5.;
 
     std::vector<double> l2_errors, h1_errors;
 
@@ -57,7 +57,7 @@ int main() {
 
         prob.set_dirichlet(Th, u);
 
-        const double tol = 1e-14;
+        const double tol = 1e-10;
         const int max_iter = 1000;
 
         uh = cg(prob.mat, prob.rhs, max_iter, tol);

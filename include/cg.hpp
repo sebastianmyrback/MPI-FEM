@@ -15,11 +15,12 @@ std::vector<double> cg(const std::map<std::pair<int, int>, double> &A, const std
     std::vector<double> r = b;      // r0 = b - Ax0 = b
     std::vector<double> p = r;      // p0 = r0
     std::vector<double> Ap(n, 0.0);
-    double alpha = 0., beta = 0., r_dot_r = 0., r_dot_r_new = 0.;
+    double alpha = 0., beta = 0., r_dot_r = 0., r_dot_r_new = 0., p_dot_Ap = 0.;
 
     for (int k = 0; k < max_iter; k++) {
         
         // Compute r^T*r
+        r_dot_r = 0.0;
         for (int i = 0; i < n; i++) {
             r_dot_r += r[i] * r[i];
         }
@@ -34,7 +35,7 @@ std::vector<double> cg(const std::map<std::pair<int, int>, double> &A, const std
         }
 
         // Compute pk^T*(A*pk)
-        double p_dot_Ap = 0.0;
+        p_dot_Ap = 0.0;
         for (int i = 0; i < n; i++) {
             p_dot_Ap += p[i] * Ap[i];
         }
@@ -54,7 +55,7 @@ std::vector<double> cg(const std::map<std::pair<int, int>, double> &A, const std
         }
 
         if (r_dot_r_new < tol) {
-            std::cout << "Converged after " << k + 1 << " iterations\n";
+            std::cout << "CG converged after " << k + 1 << " iterations\n";
             return x;
         }
 
@@ -64,8 +65,6 @@ std::vector<double> cg(const std::map<std::pair<int, int>, double> &A, const std
         for (int i = 0; i < n; i++) {
             p[i] = r[i] + beta * p[i];
         }
-
-        r_dot_r = r_dot_r_new;
 
     }
 

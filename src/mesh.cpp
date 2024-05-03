@@ -27,7 +27,7 @@ mesh1d::mesh1d(double a, double b, int n) {
 
     // Mark the boundary vertices
     (this->mesh_vertices)[0].vertex_label    = 1;
-    (this->mesh_vertices)[nv-1].vertex_label = 1;
+    (this->mesh_vertices)[nv-1].vertex_label = 2;
 
     // Create elements
     for (int i = 0; i < nk; i++) {
