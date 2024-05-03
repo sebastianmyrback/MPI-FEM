@@ -7,11 +7,11 @@
 
 // Implement the CG method for solving the linear system Ax = b where A is an std::map<std::pair<int, int>, double>
 // and x, b are std::vector<double>
-std::vector<double> cg(const std::map<std::pair<int, int>, double> &A, const std::vector<double> &b, const int max_iter, const double tol) {
+std::vector<double> cg(const std::map<std::pair<int, int>, double> &A, const std::vector<double> &b, const std::vector<double> &u0, const int max_iter, const double tol) {
     
     const int n = b.size();
 
-    std::vector<double> x(n, 0.0);  // x0 = 0
+    std::vector<double> x(u0);  // x0 = 0
     std::vector<double> r = b;      // r0 = b - Ax0 = b
     std::vector<double> p = r;      // p0 = r0
     std::vector<double> Ap(n, 0.0);

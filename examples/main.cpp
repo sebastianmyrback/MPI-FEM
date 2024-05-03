@@ -24,7 +24,7 @@ int main() {
     const int n_refinements = 4;
     int n = 7;     // number of elements
     const int n_threads = 1;
-    const double a = -1, b = 5.;
+    const double a = -0.6, b = 5.;
 
     std::vector<double> l2_errors, h1_errors;
 
@@ -41,10 +41,7 @@ int main() {
         mesh_sizes.push_back(10*Th.h);
         mesh_sizes2.push_back(10*Th.h*Th.h);
 
-        mesh_vertices.clear();
-        mesh_vertices.reserve(Th.nv);
-        uexact.clear();
-        uexact.reserve(Th.nv);
+        std::vector<double> mesh_vertices, uh, uexact, diff;
         for (int i = 0; i < Th.nv; i++) {
             mesh_vertices.push_back(Th(i).x[0]);
             uexact.push_back(u(Th(i).x));
@@ -55,14 +52,25 @@ int main() {
         
         prob.assemble_rhs(Th, trapezoidal, psi, f);
 
-        prob.set_dirichlet(Th, u);
+        prob.set_dirichlet(Th, u);      // currently only works for homogeneous Dirichlet boundary conditions
 
         const double tol = 1e-10;
         const int max_iter = 1000;
 
-        uh = cg(prob.mat, prob.rhs, max_iter, tol);
+        // Chose initial guess u0 as zeros and the exact boundary values
+        std::vector<double> u0(Th.nv, 0.);  
+        for (int i = 0; i < Th.nv; i++) {
+            const vertex<1> & v(Th(i));
+            int lab = v.vertex_label;
+            if (lab != 0) {
+                u0[i] = u(v.x);
+            }
+        }
 
-        // Compute the difference between the exact and approximate solutions
+        // Solve the linear system using the conjugate gradient method
+        uh = cg(prob.mat, prob.rhs, u0, max_iter, tol);
+
+        // Compute the difference between the exact and approximate solution coefficients
         diff.clear();
         for (int i = 0; i < Th.nv; i++) {
             diff.push_back(uexact[i] - uh[i]);

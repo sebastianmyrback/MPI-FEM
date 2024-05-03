@@ -124,8 +124,6 @@ void problem<mesh>::set_dirichlet(const mesh & Th, const std::function<double(co
         if (Th.mesh_vertices[i].vertex_label != 0) {
             rhs[i] = g(Th.mesh_vertices[i].x);
 
-            std::cout << rhs[i] << std::endl;
-
             // Zero out the row and column corresponding to the Dirichlet boundary
             for (auto & [key, value] : mat) {
                 if (key.first == i || key.second == i) {
