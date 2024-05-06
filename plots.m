@@ -1,4 +1,5 @@
-base_path = "/home/s/m/smyrback/Documents/courses/SF2568-Parallel/build/";
+%base_path = "/home/s/m/smyrback/Documents/courses/SF2568-Parallel/build/";
+base_path = "/Users/sebastianmyrback/Documents/doktorandprojekt/kurser/SF2568_Parallel_Computations_for_Large-Scale_Problems/project-git/build/";
 
 A = load(base_path + "matrix.dat");
 B = spconvert(A);
@@ -11,12 +12,14 @@ ucg = load(base_path + "uh.dat");
 
 uh = B \ b;
 
+C = full(B)
+
 u = @(x) 2*sin(2*pi*x);
 
 u_vals = u(x);
 
-plot(x, uh, 'o');
-hold on;
+%plot(x, uh, 'o');
+%hold on;
 plot(x, u_vals);
 hold on;
 plot(x, ucg, '^')

@@ -14,6 +14,8 @@ class problem {
     typedef typename mesh::Rn Rn;
     typedef typename mesh::elem elem;
 
+    std::shared_ptr<mesh> Th;
+
 public:
 
     matrix mat;              // System matrix 
@@ -22,17 +24,19 @@ public:
 
     const int thread_count;  // Number of threads to use
 
-    const int n_dofs;        // Number of degrees of freedom
+    const int n_dofs;        // Total number of degrees of freedom of the problem
 
-    problem(const int thread_count) : thread_count(thread_count), n_dofs(0) {}
-
-    template <int d, int degree>
-    void assemble_FEM_matrix(const mesh & Th, const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const double mass, const double stiffness);
+    problem(const int thread_count, std::shared_ptr<mesh> Th)
+        : thread_count(thread_count), n_dofs(0), Th(std::move(Th)) {}
 
     template <int d, int degree>
-    void assemble_rhs(const mesh & Th, const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const std::function<double(const typename mesh::Rn &)> & f);
+    void assemble_FEM_matrix(const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const double mass, const double stiffness, const std::vector<int> &dirichlet_lbs={});
+    //void assemble_FEM_matrix(const mesh & Th, const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const double mass, const double stiffness);
 
-    void set_dirichlet(const mesh & Th, const std::function<double(const typename mesh::Rn &)> & g);
+    template <int d, int degree>
+    void assemble_rhs(const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const std::function<double(const typename mesh::Rn &)> & f);
+
+    void set_dirichlet(const std::function<double(const typename mesh::Rn &)> & g);
 
 };
 
