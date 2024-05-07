@@ -1,4 +1,5 @@
 #include "basis_functions.hpp"
+
 template<int degree>
 void lagrange_1d<degree>::eval(const Rn &x, std::vector<double> &phi) const {
     // x - quadrature point in reference element 

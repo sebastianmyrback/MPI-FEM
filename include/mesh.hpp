@@ -81,6 +81,11 @@ struct Rd {
         return result;
     }
 
+    // Operator overloading for multiplication with a scalar
+    friend Rd operator*(double scalar, const Rd &v) {
+        return v * scalar;
+    }
+
     // Dot product
     double dot(const Rd &other) const {
         double result = 0.0;
@@ -100,7 +105,7 @@ struct Rd {
 };
 
 template<int d>
-struct vertex{
+struct vertex {
     
     Rd<d> x;                      // coordinates
     
@@ -139,7 +144,11 @@ struct element<1> : public base_element<1> {
     }
 
     void operator()(const Rd<1> &xref, Rd<1> &x) const {
-        x = elem_vertices[0]->x * (1.0 - xref[0]) + elem_vertices[1]->x * xref[0];
+        //x = elem_vertices[0]->x * (1.0 - xref[0]) + elem_vertices[1]->x * xref[0];
+        
+
+        x = elem_vertices[0]->x + xref[0] * (elem_vertices[1]->x - elem_vertices[0]->x);
+        //Rd<1> x = elem_vertices[0]->x * (1.0 - xref[0]) + elem_vertices[1]->x * xref[0];
     }
 };
 
@@ -153,11 +162,12 @@ public:
         typedef Rd<d> Rn;
         static const int D = d;
 
-        int nv, nk;                     // number of nodes and elements
-        double h;                       // typical mesh size
+        int nv, nk;                             // number of nodes and elements
+        double h;                               // typical mesh size
         std::vector<vert> mesh_vertices;        // array of vertices
-        std::vector<elem> elements;        // array of elements
-    
+        std::vector<elem> elements;             // array of elements
+        std::vector<int> border_dofs;           // list of global border dofs
+
         mesh() : nv(0), nk(0) {}
     
         const vert & operator()(int i) const {return mesh_vertices.at(i);} 
@@ -171,34 +181,16 @@ public:
 class mesh1d : public mesh<1> {
 public :
     
-    typedef mesh<1>::vert vert;
-    typedef mesh<1>::elem elem;
-    typedef mesh<1>::Rn Rn;
-
     mesh1d(double a, double b, int N);
-
-    const vert & operator()(int i) const {return mesh_vertices.at(i);} 
-    const elem & operator[](int i) const {return elements.at(i);} 
-
-    //void build_mesh(double a, double b, int N);
   
 };
 
 
 class mesh2d {
 public :
-  typedef vertex<2> vert;
-  typedef element<2> elem;
+  
+    mesh2d(double x0, double y0, double xend, double yend, int nx, int ny);
 
-  static const int D = 2;
-  
-  int nv, nt;
-  double area;
-  std::vector<vert> vertices;        // array of vertices
-  std::vector<elem> elements;        // array of elements
-  
-  //void BuildMesh(double a, double b, int N);
-  
 };
 
 

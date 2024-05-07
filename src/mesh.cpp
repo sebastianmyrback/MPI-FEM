@@ -29,12 +29,12 @@ mesh1d::mesh1d(double a, double b, int n) {
     (this->mesh_vertices)[0].vertex_label    = 1;
     (this->mesh_vertices)[nv-1].vertex_label = 2;
 
+    border_dofs.push_back(0);
+    border_dofs.push_back(nv-1);
+
     // Create elements
     for (int i = 0; i < nk; i++) {
-        std::vector<std::shared_ptr<vert>> vertices_for_element;
-        vertices_for_element.push_back(std::make_shared<vert>(mesh_vertices[i]));
-        vertices_for_element.push_back(std::make_shared<vert>(mesh_vertices[i + 1]));
-        (this->elements)[i].elem_vertices = vertices_for_element;
+        (this->elements)[i].elem_vertices = {std::make_shared<vert>(mesh_vertices[i]), std::make_shared<vert>(mesh_vertices[i + 1])};
         (this->elements)[i].measure = h;
     }
 

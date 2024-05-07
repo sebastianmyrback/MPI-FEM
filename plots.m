@@ -12,9 +12,11 @@ ucg = load(base_path + "uh.dat");
 
 uh = B \ b;
 
-C = full(B)
+C = full(B);
 
-u = @(x) 2*sin(2*pi*x);
+
+%u = @(x) 2*sin(2*pi*x);
+u = @(x) 2*sin(2*pi*x).*sin(pi*x/10) + 10;
 
 u_vals = u(x);
 

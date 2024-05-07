@@ -6,6 +6,22 @@
 //#include "matplotlibcpp.h"
 //namespace plt = matplotlibcpp;
 
+QuadratureRule<1> midpoint(1, {
+    QuadraturePoint<1>(Rd<1>({0.5}), 1.)
+    });
+
+QuadratureRule<1> trapezoidal(2, {
+    QuadraturePoint<1>(Rd<1>({0.0}), 0.5), 
+    QuadraturePoint<1>(Rd<1>({1.0}), 0.5)
+    });
+
+QuadratureRule<1> simpson(3, {
+    QuadraturePoint<1>(Rd<1>({0.0}), 1./3), 
+    QuadraturePoint<1>(Rd<1>({0.5}), 1./3), 
+    QuadraturePoint<1>(Rd<1>({1.0}), 1./3)
+    });
+
+
 // define a function to be used as a source term f(x) = 8*pi^2*sin(2*pi*x)
 double f(const Rd<1> & x) {
     //return 8.0 * M_PI * M_PI * sin(2.0 * M_PI * x[0]);
@@ -14,27 +30,23 @@ double f(const Rd<1> & x) {
 
 double u(const Rd<1> & x) {
     //return 2*sin(2.0 * M_PI * x[0]);
-    return 2*sin(2*M_PI*x[0])*sin(M_PI*x[0]/10);
+    return 2*sin(2*M_PI*x[0])*sin(M_PI*x[0]/10) + 10;
 }
 
 int main() {
     
     // Create a mesh object
     const int n_refinements = 7;
-    int n = 7;     // number of elements
+    int n = 10;     // number of elements
     const int n_threads = 1;
-    const double a = 0., b = 5.;
+    const double a = -.6, b = 1.;
+    
 
     std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.);
 
     std::vector<double> mesh_vertices, mesh_sizes, mesh_sizes2, uh, uexact, diff;
 
-    QuadratureRule<1> midpoint(1, {QuadraturePoint<1>(Rd<1>({0.5}), 1.)});
-    
-    QuadratureRule<1> trapezoidal(2, {QuadraturePoint<1>(Rd<1>({0.0}), 0.5), QuadraturePoint<1>(Rd<1>({1.0}), 0.5)});
 
-    QuadratureRule<1> simpson(3, {QuadraturePoint<1>(Rd<1>({0.0}), 1./3), QuadraturePoint<1>(Rd<1>({.5}), 1./3), QuadraturePoint<1>(Rd<1>({1.}), 1./3)});
-    
     for (int i = 0; i < n_refinements; i++) {
 
         std::cout << i + 1 << " / " << n_refinements << std::endl;
@@ -54,32 +66,24 @@ int main() {
             uexact.push_back(u(Th(i).x));
         }
 
-        std::vector<int> dirichlet_lbs = {1, 2};
+        dirichlet_bc<1> bc;
+        bc.g = u;
+        bc.lbs = {1, 2};
+        bc.set_dirichlet = true;
+
+        const double mass = 0;
+        const double stiffness = 1;
 
         prob.assemble_rhs(midpoint, psi, f);
-
-        //! SOMETHING IS PROBABLY WRONG WITH THE QUADRATURE RULES, SINCE MIDPOINT IS TWICE AS GOOD 
-        //! AS SIMPSON AND TRAPEZOIDAL
-
-        // assemble stiffness matrix
-        prob.assemble_FEM_matrix(midpoint, psi, 0., 1., dirichlet_lbs);
-        //prob.assemble_FEM_matrix(Th, trapezoidal, psi, 0., 1.);
+        prob.assemble_FEM_matrix(midpoint, psi, mass, stiffness, bc);
+        //prob.assemble_FEM_matrix(trapezoidal, psi, mass, stiffness);
         
-        //prob.set_dirichlet(Th, u);      // currently only works for homogeneous Dirichlet boundary conditions
-
         const double tol = 1e-10;
         const int max_iter = 1000;
 
-        // Chose initial guess u0 as zeros and the exact boundary values
+        // Chose initial guess u0 as zeros
         std::vector<double> u0(Th.nv, 0.);  
-        // for (int i = 0; i < Th.nv; i++) {
-        //     const vertex<1> & v(Th(i));
-        //     int lab = v.vertex_label;
-        //     if (lab != 0) {
-        //         u0[i] = u(v.x);
-        //     }
-        // }
-
+        
         // Solve the linear system using the conjugate gradient method
         uh = cg(prob.mat, prob.rhs, u0, max_iter, tol);
 

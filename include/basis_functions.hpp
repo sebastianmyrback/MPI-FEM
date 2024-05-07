@@ -54,7 +54,7 @@ public:
 };
 
 
-#include "../src/basis_functions.tpp"
+#include "basis_functions.tpp"
 
 
 #endif 

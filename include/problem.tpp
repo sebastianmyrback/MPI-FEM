@@ -1,8 +1,8 @@
-#include "quadrature.cpp"
+#include "../src/quadrature.cpp"
 
 template <typename mesh>
 template <int d, int deg>
-void problem<mesh>::assemble_FEM_matrix(const QuadratureRule<d> &qr, const basis_function<d, deg> &psi, const double mass, const double stiffness, const std::vector<int> &dirichlet_lbls) {
+void problem<mesh>::assemble_FEM_matrix(const QuadratureRule<d> &qr, const basis_function<d, deg> &psi, const double mass, const double stiffness, const dirichlet_bc<d> &bc) {
 
     // clear the matrix
     mat.clear();
@@ -18,6 +18,22 @@ void problem<mesh>::assemble_FEM_matrix(const QuadratureRule<d> &qr, const basis
     std::vector<double> psi_vals(dofs_per_elem);
     std::vector<std::vector<double>> dpsi_vals(dofs_per_elem, std::vector<double>(dim, 0.));    // ndofs x dim matrix
     
+    std::vector<int> border_dofs;
+    std::map<int, double> border_dofs_values;
+
+    // Get boundary dofs if using Dirichlet boundary conditions
+    if (bc.set_dirichlet) {
+        assert(!bc.lbs.empty());
+
+        border_dofs = Th->border_dofs;
+
+        // Add (global dof index, boundary value) to the map
+        for (int i = 0; i < border_dofs.size(); i++) {
+            border_dofs_values.insert({border_dofs[i], bc.g(Th->mesh_vertices[border_dofs[i]].x)});
+        }
+
+    }
+
     // Loop over all elements
     for (int k = 0; k < Th->nk; k++) {
 
@@ -32,64 +48,91 @@ void problem<mesh>::assemble_FEM_matrix(const QuadratureRule<d> &qr, const basis
         // Create map from local to global dofs and corresponding vertex labels
         // (should be generalized, dof not always at vertices!)
         std::vector<int> loc2glb(dofs_per_elem);
-        std::vector<int> dirichlet_lbs(dofs_per_elem);
+        std::vector<int> labels(dofs_per_elem);
         
         for (int i = 0; i < dofs_per_elem; i++) {
             loc2glb[i] = K.elem_vertices[i]->glb_idx;
-            dirichlet_lbs[i] = K.elem_vertices[i]->vertex_label;    
+            labels[i]  = K.elem_vertices[i]->vertex_label;    
         }
+
+        // Create local cell matrix                                                                 
+        std::vector<std::vector<double>> Ak(dofs_per_elem, std::vector<double>(dofs_per_elem, 0.));
+
+        // Local rhs contribution vector                                                            
+        std::vector<double> bk(dofs_per_elem, 0.);
 
         // Loop over trial function dofs
         for (int i = 0; i < dofs_per_elem; i++) {    
+            
+            bool is_row_dof_dirichlet = false;
+
+            if (bc.set_dirichlet)
+                is_row_dof_dirichlet = (std::find(bc.lbs.begin(), bc.lbs.end(), labels[i]) != bc.lbs.end());
 
             // Loop over test function dofs
             for (int j = 0; j < dofs_per_elem; j++) {
+                
+                bool is_col_dof_dirichlet = false;
 
-                double local_contribution = 0.;
+                double ak_ij = 0.;  // local matrix entry
 
-                // Add integral over element
+                if (bc.set_dirichlet)
+                    is_col_dof_dirichlet = (std::find(bc.lbs.begin(), bc.lbs.end(), labels[j]) != bc.lbs.end());
+
+                // assemble local matrix Ak without boundary conditions 
+                // subtract boundary conditions from rhs vector
                 for (int ipq = 0; ipq < n_quad_pts; ++ipq) {
 
                     const Rn xq(qr[ipq].node);   // quadrature point in reference element
 
                     if (mass) {
                         psi.eval(xq, psi_vals);
-                        local_contribution += mass * psi_vals[i] * psi_vals[j] * qr[ipq].weight * measure;
+                        ak_ij += mass * psi_vals[i] * psi_vals[j] * qr[ipq].weight * measure;
                     }
                                             
                     if (stiffness) {
                         psi.eval_d(K, xq, dpsi_vals);
                         for (int dm = 0; dm < dim; dm++) {
-                            local_contribution += stiffness * dpsi_vals[i][dm] * dpsi_vals[j][dm] * qr[ipq].weight * measure;
+                            ak_ij += stiffness * qr[ipq].weight * measure * dpsi_vals[i][dm] * dpsi_vals[j][dm];
+
+                            if (is_col_dof_dirichlet) {
+                                // subtract dirichlet column of A times boundary value from rhs
+                                assert(bc.set_dirichlet);
+                                rhs[loc2glb[i]] -= stiffness * qr[ipq].weight * measure * dpsi_vals[i][dm] * dpsi_vals[j][dm] * border_dofs_values.at(loc2glb[j]);
+                            }
                         }
                     }
                 }
 
+                // Sum averages of diagonal entries
                 if (i == j)
-                    avg_diag += local_contribution / dofs_per_elem;
+                    avg_diag += ak_ij / dofs_per_elem;
+
 
                 // Check if either i or j is a Dirichlet dof
-                int is_dirichlet = (std::find(dirichlet_lbls.begin(), dirichlet_lbls.end(), dirichlet_lbs[i]) != dirichlet_lbls.end()) || (std::find(dirichlet_lbls.begin(), dirichlet_lbls.end(), dirichlet_lbs[j]) != dirichlet_lbls.end());
+                bool is_dirichlet = is_row_dof_dirichlet || is_col_dof_dirichlet;
                 
-                if (is_dirichlet && !dirichlet_lbls.empty()) {
+                if (is_dirichlet) {
 
-                    local_contribution = 0.0;   // local row and column are set to zero
+                    ak_ij = 0.0;   // local row and column are set to zero
 
                     // diagonal entry is set to average of all other local diagonal entries (for better conditioning of the matrix, it could just be 1)
                     if (i == j) {
 
-                        local_contribution = avg_diag / dofs_per_elem;
+                        ak_ij = avg_diag;
                         
-                        if (!rhs.empty()) 
-                            rhs[loc2glb[i]] = 0.0;
+                        if (!rhs.empty()) {
+                            assert(bc.set_dirichlet);
+                            rhs[loc2glb[i]] = avg_diag*border_dofs_values.at(loc2glb[j]);
+                        }
                         else {
-                            std::cout << "Error! Must assemble right hand side before assembling matrix!\n";
+                            std::cerr << "Error! Must assemble right hand side before assembling matrix!\n";
                             exit(1);
                         }
                     }                    
                 } 
                 
-                mat[std::make_pair(loc2glb[i], loc2glb[j])] += local_contribution;
+                mat[std::make_pair(loc2glb[i], loc2glb[j])] += ak_ij;
 
             }
 
@@ -140,6 +183,8 @@ void problem<mesh>::assemble_rhs(const QuadratureRule<d> &qr, const basis_functi
             
             // Loop over dofs
             for (int i = 0; i < ndofs; i++) {
+                // std::cout << "loc2glb[i] = " << loc2glb[i] << std::endl;
+                // std::cout << "xq = " << xq << std::endl;
                 // std::cout << "x = " << x << std::endl;
                 // std::cout << "f(x) = " << f(x) << std::endl;
                 // getchar();

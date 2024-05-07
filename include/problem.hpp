@@ -6,6 +6,18 @@
 #include "basis_functions.hpp"
 #include "quadrature.hpp"
 
+template <int d>
+struct dirichlet_bc {
+
+    typedef Rd<d> Rn;
+
+    std::function<double(const Rn &)> g;    // Dirichlet boundary function
+    std::vector<int> lbs;                   // labels of Dirichlet boundaries
+    bool set_dirichlet = false;             // if false, no Dirichlet boundary condition is set strongly
+
+
+};
+
 
 template <typename mesh>
 class problem {
@@ -30,8 +42,13 @@ public:
         : thread_count(thread_count), n_dofs(0), Th(std::move(Th)) {}
 
     template <int d, int degree>
-    void assemble_FEM_matrix(const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const double mass, const double stiffness, const std::vector<int> &dirichlet_lbs={});
-    //void assemble_FEM_matrix(const mesh & Th, const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const double mass, const double stiffness);
+    void assemble_FEM_matrix(const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const double mass, const double stiffness, const dirichlet_bc<d> & bc);
+    
+    template <int d, int degree>
+    void assemble_FEM_matrix(const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const double mass, const double stiffness) {
+        dirichlet_bc<d> bc;    // set_dirichlet defaults to false
+        assemble_FEM_matrix(qr, psi, mass, stiffness, bc);
+    };
 
     template <int d, int degree>
     void assemble_rhs(const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const std::function<double(const typename mesh::Rn &)> & f);
@@ -42,6 +59,6 @@ public:
 
 
 
-#include "../src/problem.tpp"
+#include "problem.tpp"
 
 #endif
