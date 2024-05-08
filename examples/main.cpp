@@ -6,6 +6,8 @@
 #include "matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
+#include <chrono>
+
 const QuadratureRule<1> midpoint(1, {
     QuadraturePoint<1>(Rd<1>({0.5}), 1.)
     });
@@ -44,8 +46,12 @@ double u(const Rd<1> & x) {
     return 2*sin(2*M_PI*x[0])*sin(M_PI*x[0]/10) + 10;
 }
 
+
 int main() {
+
+    auto start = std::chrono::high_resolution_clock::now();
     
+
     // Create a mesh object
     const int n_refinements = 7;
     int n = 10;     // number of elements
@@ -54,7 +60,6 @@ int main() {
     
 
     std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.), mesh_sizes(n_refinements, 0.), mesh_sizes_sq(n_refinements, 0.);
-
     std::vector<double> mesh_vertices, uh, uexact, diff;
 
 
@@ -147,19 +152,24 @@ int main() {
     // }  
     // std::cout << std::endl;
 
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "Elapsed time: " <<  duration.count() << " [ms]" << std::endl;
+
+    // plt::plot(mesh_vertices, uh, "*", {{"label", "uh"}});
+    // plt::plot(mesh_vertices, uexact, {{"label", "u exact"}});
+    // plt::legend();
+    // plt::show();
+
+    // plt::loglog(mesh_sizes, mesh_sizes_sq, {{"label", "h^2"}});
+    // plt::loglog(mesh_sizes, mesh_sizes, {{"label", "h"}});
+    // plt::loglog(mesh_sizes, l2_errors, "*", {{"label", "L2 error"}});
+    // plt::loglog(mesh_sizes, h1_errors, "^", {{"label", "H1 error"}});
+    // plt::legend();
+    // plt::show();
 
 
-    plt::plot(mesh_vertices, uh, "*", {{"label", "uh"}});
-    plt::plot(mesh_vertices, uexact, {{"label", "u exact"}});
-    plt::legend();
-    plt::show();
-
-    plt::loglog(mesh_sizes, mesh_sizes_sq, {{"label", "h^2"}});
-    plt::loglog(mesh_sizes, mesh_sizes, {{"label", "h"}});
-    plt::loglog(mesh_sizes, l2_errors, "*", {{"label", "L2 error"}});
-    plt::loglog(mesh_sizes, h1_errors, "^", {{"label", "H1 error"}});
-    plt::legend();
-    plt::show();
 
     return 0;
 }
