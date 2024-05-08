@@ -1,7 +1,5 @@
-#include "basis_functions.hpp"
-
 template<int degree>
-void lagrange_1d<degree>::eval(const Rn &x, std::vector<double> &phi) const {
+void P1Lagrange1D<degree>::eval(const Rn &x, std::vector<double> &phi) const {
     // x - quadrature point in reference element 
 
     phi.resize(this->ndof);
@@ -10,7 +8,7 @@ void lagrange_1d<degree>::eval(const Rn &x, std::vector<double> &phi) const {
 };
 
 template<int degree>
-void lagrange_1d<degree>::eval_d(const FE &K, const Rn &x, std::vector<std::vector<double>> &dphi) const {
+void P1Lagrange1D<degree>::eval_d(const FE &K, const Rn &x, std::vector<std::vector<double>> &dphi) const {
     // K - physical element
     // x - quadrature point in reference element
     // dphi - matrix of size ndof x D holding the derivatives of the basis functions

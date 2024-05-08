@@ -9,10 +9,10 @@ template<int d>
 class QuadraturePoint {
 public:
 
-    const Rd<d> node;
+    const Point<d> node;
     const double weight;
 
-    QuadraturePoint(const Rd<d> &_node, const double _weight) : node(_node), weight(_weight) {}
+    QuadraturePoint(const Point<d> &_node, const double _weight) : node(_node), weight(_weight) {}
 
 };
 

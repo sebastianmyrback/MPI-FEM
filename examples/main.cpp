@@ -1,5 +1,5 @@
 #include <iostream>
-#include "problem.hpp"
+#include "fem.hpp"
 #include "export.hpp"
 #include "cg.hpp"
 #include "norm.hpp"
@@ -10,39 +10,39 @@
 namespace plt = matplotlibcpp;
 
 const QuadratureRule<1> midpoint(1, {
-    QuadraturePoint<1>(Rd<1>({0.5}), 1.)
+    QuadraturePoint<1>(Point<1>({0.5}), 1.)
     });
 
 const QuadratureRule<1> trapezoidal(2, {
-    QuadraturePoint<1>(Rd<1>({0.0}), 0.5), 
-    QuadraturePoint<1>(Rd<1>({1.0}), 0.5)
+    QuadraturePoint<1>(Point<1>({0.0}), 0.5), 
+    QuadraturePoint<1>(Point<1>({1.0}), 0.5)
     });
 
 const QuadratureRule<1> simpson(3, {
-    QuadraturePoint<1>(Rd<1>({0.0}), 1./3), 
-    QuadraturePoint<1>(Rd<1>({0.5}), 1./3), 
-    QuadraturePoint<1>(Rd<1>({1.0}), 1./3)
+    QuadraturePoint<1>(Point<1>({0.0}), 1./3), 
+    QuadraturePoint<1>(Point<1>({0.5}), 1./3), 
+    QuadraturePoint<1>(Point<1>({1.0}), 1./3)
     });
 
 const QuadratureRule<1> gauss_lobatto6(6, {
-    QuadraturePoint<1>(Rd<1>({0.0}), 0.03333333333333333), 
-    QuadraturePoint<1>(Rd<1>({0.11747233803526763}), 0.1892374781489235), 
-    QuadraturePoint<1>(Rd<1>({0.3573842417596774}), 0.2774291885177432),
-    QuadraturePoint<1>(Rd<1>({0.6426157582403226}), 0.2774291885177432), 
-    QuadraturePoint<1>(Rd<1>({0.8825276619647324}), 0.1892374781489235), 
-    QuadraturePoint<1>(Rd<1>({1.0}), 0.03333333333333333)
+    QuadraturePoint<1>(Point<1>({0.0}), 0.03333333333333333), 
+    QuadraturePoint<1>(Point<1>({0.11747233803526763}), 0.1892374781489235), 
+    QuadraturePoint<1>(Point<1>({0.3573842417596774}), 0.2774291885177432),
+    QuadraturePoint<1>(Point<1>({0.6426157582403226}), 0.2774291885177432), 
+    QuadraturePoint<1>(Point<1>({0.8825276619647324}), 0.1892374781489235), 
+    QuadraturePoint<1>(Point<1>({1.0}), 0.03333333333333333)
     });
 
 
 
 
 // define a function to be used as a source term f(x) = 8*pi^2*sin(2*pi*x)
-double f(const Rd<1> & x) {
+double f(const Point<1> & x) {
     //return 8.0 * M_PI * M_PI * sin(2.0 * M_PI * x[0]);
     return (M_PI*M_PI*(361*cos((19*M_PI*x[0])/10) - 441*cos((21*M_PI*x[0])/10)))/100;
 }
 
-double u(const Rd<1> & x) {
+double u(const Point<1> & x) {
     //return 2*sin(2.0 * M_PI * x[0]);
     return 2*sin(2*M_PI*x[0])*sin(M_PI*x[0]/10) + 10;
 }
@@ -58,34 +58,36 @@ int main() {
     const int n_threads = 1;
     const double a = -0.63, b = 5.27;
     
-
     std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.), mesh_sizes(n_refinements, 0.), mesh_sizes_sq(n_refinements, 0.);
     std::vector<double> mesh_vertices, uh, uexact, diff;
-
 
     for (int i = 0; i < n_refinements; i++) {
 
         std::cout << i + 1 << " / " << n_refinements << std::endl;
         
-        lagrange_1d<1> psi;
-        
+        P1Lagrange1D<1> psi;
         Mesh1D Th(a, b, n);
-
-        problem<Mesh1D> prob(n_threads, std::make_shared<Mesh1D>(Th));
+        FEM<Mesh1D> prob(n_threads, std::make_shared<Mesh1D>(Th));
 
         mesh_sizes[i] = Th.get_h();
-
         mesh_vertices.clear();
         uh.clear();
         uexact.clear();
         diff.clear();
+
+        // for (auto cell = Th.cell_begin(); cell != Th.cell_end(); ++cell) {
+        //     for (int v = 0; v < Cell<1>::n_verts_per_cell; v++) {
+        //         mesh_vertices.push_back(cell->vertex(v)[0]);
+        //         uexact.push_back(u(cell->vertex(v)));
+        //     }
+        // }
 
         for (auto vertex = Th.vertex_begin(); vertex != Th.vertex_end(); ++vertex) {
             mesh_vertices.push_back((*vertex)[0]);
             uexact.push_back(u((*vertex)[0]));
         }
 
-        dirichlet_bc<1> bc;
+        DirichletBC<1> bc;
         bc.g = u;
         bc.lbs = {1, 2};
         bc.set_dirichlet = true;
@@ -118,6 +120,8 @@ int main() {
 
         n *= 2;
 
+        //gnuplot::write_cells(Th, "Th.dat");
+
         matlab::save(prob.mat, "matrix.dat");
         matlab::save(prob.rhs, "rhs.dat");
         matlab::save(mesh_vertices, "x.dat");
@@ -146,30 +150,25 @@ int main() {
     }
     std::cout << std::endl;
 
-    // std::cout << "Mesh vertices: ";
-    // for (auto & x : mesh_vertices) {
-    //     std::cout << x << " ";
-    // }  
-    // std::cout << std::endl;
-
-
-
-    plt::plot(mesh_vertices, uh, "*", {{"label", "uh"}});
-    plt::plot(mesh_vertices, uexact, {{"label", "u exact"}});
-    plt::legend();
-    plt::show();
-
-    plt::loglog(mesh_sizes, mesh_sizes_sq, {{"label", "h^2"}});
-    plt::loglog(mesh_sizes, mesh_sizes, {{"label", "h"}});
-    plt::loglog(mesh_sizes, l2_errors, "*", {{"label", "L2 error"}});
-    plt::loglog(mesh_sizes, h1_errors, "^", {{"label", "H1 error"}});
-    plt::legend();
-    plt::show();
 
     auto stop = std::chrono::high_resolution_clock::now();
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
     std::cout << "Elapsed time: " <<  duration.count() << " [ms]" << std::endl;
+
+
+    // plt::plot(mesh_vertices, uh, "*", {{"label", "uh"}});
+    // plt::plot(mesh_vertices, uexact, {{"label", "u exact"}});
+    // plt::legend();
+    // plt::show();
+
+    // plt::loglog(mesh_sizes, mesh_sizes_sq, {{"label", "h^2"}});
+    // plt::loglog(mesh_sizes, mesh_sizes, {{"label", "h"}});
+    // plt::loglog(mesh_sizes, l2_errors, "*", {{"label", "L2 error"}});
+    // plt::loglog(mesh_sizes, h1_errors, "^", {{"label", "H1 error"}});
+    // plt::legend();
+    // plt::show();
+
 
     return 0;
 }

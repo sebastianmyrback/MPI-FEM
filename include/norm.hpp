@@ -5,7 +5,7 @@
 #include "quadrature.hpp"
 
 template <typename mesh, int d, int degree>
-static double L2H1norm(const mesh &Th, const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const std::vector<double> &u, const double l2, const double h1) {
+static double L2H1norm(const mesh &Th, const QuadratureRule<d> &qr, const BasisFunction<d, degree> & psi, const std::vector<double> &u, const double l2, const double h1) {
 
     typedef typename mesh::Rn Rn;
 
