@@ -50,12 +50,12 @@ int main() {
     const int n_refinements = 7;
     int n = 10;     // number of elements
     const int n_threads = 1;
-    const double a = 0, b = 1.;
+    const double a = -0.63, b = 5.27;
     
 
-    std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.);
+    std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.), mesh_sizes(n_refinements, 0.), mesh_sizes_sq(n_refinements, 0.);
 
-    std::vector<double> mesh_vertices, mesh_sizes, mesh_sizes2, uh, uexact, diff;
+    std::vector<double> mesh_vertices, uh, uexact, diff;
 
 
     for (int i = 0; i < n_refinements; i++) {
@@ -68,8 +68,7 @@ int main() {
 
         problem<mesh1d> prob(n_threads, std::make_shared<mesh1d>(Th));
 
-        mesh_sizes.push_back(10*Th.h);
-        mesh_sizes2.push_back(10*Th.h*Th.h);
+        mesh_sizes[i] = Th.h;
 
         mesh_vertices.clear();
         uh.clear();
@@ -120,7 +119,16 @@ int main() {
 
     }
 
-    // print the errors
+    // print the mesh sizes
+    std::cout << "Mesh sizes: ";
+    for (int i = 0; i < n_refinements; i++) {
+        std::cout << mesh_sizes[i] << " ";
+
+        mesh_sizes_sq[i] = 10 * mesh_sizes[i] * mesh_sizes[i];
+        mesh_sizes[i] *= 10;
+    }
+    std::cout << std::endl;
+
     std::cout << "L2 errors: ";
     for (auto & e : l2_errors) {
         std::cout << e << " ";
@@ -146,7 +154,7 @@ int main() {
     plt::legend();
     plt::show();
 
-    plt::loglog(mesh_sizes, mesh_sizes2, {{"label", "h^2"}});
+    plt::loglog(mesh_sizes, mesh_sizes_sq, {{"label", "h^2"}});
     plt::loglog(mesh_sizes, mesh_sizes, {{"label", "h"}});
     plt::loglog(mesh_sizes, l2_errors, "*", {{"label", "L2 error"}});
     plt::loglog(mesh_sizes, h1_errors, "^", {{"label", "H1 error"}});
