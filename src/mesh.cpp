@@ -1,35 +1,5 @@
 #include "mesh.hpp"
 
-// // template specialization for 1D
-// template<>
-// void Mesh<1>::build_mesh(const double a, const double b, const int n) {
-//     vertices.clear();
-//     quads.clear();
-//     quad_to_vertex.clear();
-//     border_dofs.clear();
-
-//     // create vertices
-//     for (int i = 0; i < n + 1; i++) {
-//         vertices.push_back(Vertex<1>({a + i * (b - a) / n}));
-//     }
-
-//     // create quads
-//     for (int i = 0; i < n; i++) {
-//         quads.push_back(Quad<1>(i, vertices[i], vertices[i + 1]));
-//     }
-
-//     // create quad_to_vertex map
-//     quad_to_vertex.resize(n);
-//     for (int i = 0; i < n; i++) {
-//         quad_to_vertex[i] = i;
-//     }
-
-//     // create border dofs
-//     border_dofs.push_back(0);
-//     border_dofs.push_back(n);
-// }
-
-
 Mesh1D::Mesh1D(
     const double a, 
     const double b, 
@@ -37,13 +7,13 @@ Mesh1D::Mesh1D(
     {
 
     nverts = n + 1;
-    nquads = n;
+    ncells = n;
     nbe = 2;
 
-    h = (b - a) / nquads;
+    h = (b - a) / ncells;
 
     vertices.resize(nverts);
-    quad_to_vertex.resize(n_verts_per_quad * nquads);
+    cell_to_vertex.resize(n_verts_per_cell * ncells);
     border_dofs.reserve(nbe);
 
     // Create inner vertices
@@ -62,13 +32,13 @@ Mesh1D::Mesh1D(
 
     // Create elements
     int l = 0;
-    for (int i = 0; i < nquads; i++) {
+    for (int i = 0; i < ncells; i++) {
 
-        for (int j = 0; j < n_verts_per_quad; j++) {
-            quad_to_vertex[i * n_verts_per_quad + j] = i + j;
+        for (int j = 0; j < n_verts_per_cell; j++) {
+            cell_to_vertex[i * n_verts_per_cell + j] = i + j;
         }
 
-        quads.push_back(Quad<1>(std::make_shared<Mesh1D>(*this), i, h));      
+        cells.push_back(Cell<1>(std::make_shared<Mesh1D>(*this), i, h));      
     
     }
 

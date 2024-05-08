@@ -21,15 +21,13 @@ static double L2H1norm(const mesh &Th, const QuadratureRule<d> &qr, const basis_
 
     // Loop over all elements
     //for (int k = 0; k < Th.nk; k++) {
-    for (const auto & K : Th) {
-
-        // Get the current element
-        //const elem & K = Th[k];
+    for (auto cell = Th.cell_begin(); cell != Th.cell_end(); ++cell) 
+    {
 
         // Create map from local to global dofs
         std::vector<int> loc2glb(ndofs);
         for (int i=0; i<ndofs; i++)
-            loc2glb[i] = K.vertex(i).global_index();
+            loc2glb[i] = cell->vertex(i).global_index();
 
         // Loop over quadrature points
         for (int ipq = 0; ipq < n_quad_pts; ++ipq) {
@@ -37,9 +35,9 @@ static double L2H1norm(const mesh &Th, const QuadratureRule<d> &qr, const basis_
             const Rn xq(qr[ipq].node);   // quadrature point in reference element
 
             if (l2) psi.eval(xq, psi_vals);
-            if (h1) psi.eval_d(K, xq, dpsi_vals);
+            if (h1) psi.eval_d(*cell, xq, dpsi_vals);
 
-            const double cint = qr[ipq].weight * K.get_measure();
+            const double cint = qr[ipq].weight * cell->get_measure();
 
             double uk = 0.;
 

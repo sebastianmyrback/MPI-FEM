@@ -3,6 +3,8 @@
 #include "export.hpp"
 #include "cg.hpp"
 #include "norm.hpp"
+#include <chrono>
+
 
 #include "matplotlibcpp.h"
 namespace plt = matplotlibcpp;
@@ -45,18 +47,20 @@ double u(const Rd<1> & x) {
     return 2*sin(2*M_PI*x[0])*sin(M_PI*x[0]/10) + 10;
 }
 
+
 int main() {
-    
+
+    auto start = std::chrono::high_resolution_clock::now();
+
     // Create a mesh object
     const int n_refinements = 7;
     int n = 10;     // number of elements
     const int n_threads = 1;
-    const double a = 0, b = 1.;
+    const double a = -0.63, b = 5.27;
     
 
-    std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.);
-
-    std::vector<double> mesh_vertices, mesh_sizes, mesh_sizes2, uh, uexact, diff;
+    std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.), mesh_sizes(n_refinements, 0.), mesh_sizes_sq(n_refinements, 0.);
+    std::vector<double> mesh_vertices, uh, uexact, diff;
 
 
     for (int i = 0; i < n_refinements; i++) {
@@ -69,16 +73,16 @@ int main() {
 
         problem<Mesh1D> prob(n_threads, std::make_shared<Mesh1D>(Th));
 
-        mesh_sizes.push_back(10*Th.get_h());
-        mesh_sizes2.push_back(10*Th.get_h()*Th.get_h());
+        mesh_sizes[i] = Th.get_h();
 
         mesh_vertices.clear();
         uh.clear();
         uexact.clear();
         diff.clear();
-        for (int i = 0; i < Th.get_nverts(); i++) {
-            mesh_vertices.push_back(Th.get_vertices()[i][0]);
-            uexact.push_back(u(Th.get_vertices()[i][0]));
+
+        for (auto vertex = Th.vertex_begin(); vertex != Th.vertex_end(); ++vertex) {
+            mesh_vertices.push_back((*vertex)[0]);
+            uexact.push_back(u((*vertex)[0]));
         }
 
         dirichlet_bc<1> bc;
@@ -121,7 +125,15 @@ int main() {
 
     }
 
-    // print the errors
+    std::cout << "Mesh sizes: ";
+    for (int i = 0; i < n_refinements; i++) {
+        std::cout << mesh_sizes[i] << " ";
+
+        mesh_sizes_sq[i] = 10 * mesh_sizes[i] * mesh_sizes[i];
+        mesh_sizes[i] *= 10;
+    }
+    std::cout << std::endl;
+
     std::cout << "L2 errors: ";
     for (auto & e : l2_errors) {
         std::cout << e << " ";
@@ -147,12 +159,17 @@ int main() {
     plt::legend();
     plt::show();
 
-    plt::loglog(mesh_sizes, mesh_sizes2, {{"label", "h^2"}});
+    plt::loglog(mesh_sizes, mesh_sizes_sq, {{"label", "h^2"}});
     plt::loglog(mesh_sizes, mesh_sizes, {{"label", "h"}});
     plt::loglog(mesh_sizes, l2_errors, "*", {{"label", "L2 error"}});
     plt::loglog(mesh_sizes, h1_errors, "^", {{"label", "H1 error"}});
     plt::legend();
     plt::show();
+
+    auto stop = std::chrono::high_resolution_clock::now();
+
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "Elapsed time: " <<  duration.count() << " [ms]" << std::endl;
 
     return 0;
 }

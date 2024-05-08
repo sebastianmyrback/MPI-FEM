@@ -127,17 +127,16 @@ struct Vertex : public Rd<d> {
     Vertex(const Rd<d> &r, const int idx, const int label) : Rd<d>(r), glb_idx(idx), vertex_label(label) {}
 };
 
-// Struct representing a quadrilateral element in dimension d 
+// Struct representing a quadrilateral cell in dimension d 
 template<int d>
-struct Quad {
+struct Cell {
 
     // Access the vertex with local index vertex 
     Vertex<d> vertex(int vertex) const {
-        assert(0 < vertex < n_verts_per_quad);
-        assert(0 < index < msh->get_nquads());
-        int vertex_index = msh->get_quad_to_vertex()[index*n_verts_per_quad + vertex];
 
-        return msh->get_vertices()[vertex_index];
+        int vertex_index = msh->cell_to_vertex[index*n_verts_per_cell + vertex];
+
+        return msh->vertices[vertex_index];
     }
 
     // Map a point from the reference element xref to the physical element X
@@ -146,10 +145,10 @@ struct Quad {
         x = vertex(0) + xref[0] * (vertex(1) - vertex(0));
     };
 
-    Quad() : msh(nullptr), index(0), measure(0.0) {}
-    Quad(std::shared_ptr<Mesh<d>> _msh) : msh(_msh), index(0), measure(0.0) {}
-    Quad(std::shared_ptr<Mesh<d>> _msh, int i) : msh(_msh), index(i), measure(0.0) {}
-    Quad(std::shared_ptr<Mesh<d>> _msh, int i, double m) : msh(_msh), index(i), measure(m) {}
+    Cell() : msh(nullptr), index(0), measure(0.0) {}
+    Cell(std::shared_ptr<Mesh<d>> _msh) : msh(_msh), index(0), measure(0.0) {}
+    Cell(std::shared_ptr<Mesh<d>> _msh, int i) : msh(_msh), index(i), measure(0.0) {}
+    Cell(std::shared_ptr<Mesh<d>> _msh, int i, double m) : msh(_msh), index(i), measure(m) {}
 
     int get_index() const {return index;}
     double get_measure() const {return measure;}
@@ -157,10 +156,10 @@ struct Quad {
 protected:
     
     std::shared_ptr<Mesh<d>> msh;
-    int index;      // index of the quad in the mesh
-    double measure; // measure of the quad (length, area, volume, etc.)
+    int index;      // index of the cell in the mesh
+    double measure; // measure of the cell (length, area, volume, etc.)
 
-    static const int n_verts_per_quad = 1 << d;   // number of vertices in a quadrilateral quad = 2^d
+    static const int n_verts_per_cell = 1 << d;   // number of vertices in a quadrilateral cell = 2^d
 
 };
 
@@ -170,29 +169,33 @@ struct Mesh {
 
 protected:
 
-    std::list<Quad<d>> quads;                     // list of quadrialterals
+    std::list<Cell<d>> cells;                     // list of cells in the mesh
     std::vector<int> border_dofs;                 // list of global border dofs
-    std::vector<int> quad_to_vertex;              // map index from quad to vertex
-    std::vector<Vertex<d>> vertices;              // list of vertices in the mesh
 
-    static const int n_verts_per_quad = 1 << d;   // number of vertices in a quadrilateral quad = 2^d
 
-    int nverts, nquads, nbe;                      // number of vertices, quadrilaterals and border elements in the mesh
+    static const int n_verts_per_cell = 1 << d;   // number of vertices in a quadrilateral cell = 2^d
+
+    int nverts, ncells, nbe;                      // number of vertices, quadrilaterals and border elements in the mesh
     double h;                                     // typical mesh size
 
 public:
 
-    typedef Quad<d> Element;
+    typedef Cell<d> Element;
     typedef Rd<d> Rn;
 
+    //! Want protected but then can't access from derived class
+    std::vector<int> cell_to_vertex;              // map index from cell to vertex
+    std::vector<Vertex<d>> vertices;              // list of vertices in the mesh
+
+
     int get_nverts() const {return nverts;}
-    int get_nquads() const {return nquads;}
+    int get_ncells() const {return ncells;}
     int get_nbe() const {return nbe;}
     double get_h() const {return h;}
 
     std::vector<int> get_border_dofs() const {return border_dofs;}
     std::vector<Vertex<d>> get_vertices() const {return vertices;}
-    std::vector<int> get_quad_to_vertex() const {return quad_to_vertex;}
+    std::vector<int> get_cell_to_vertex() const {return cell_to_vertex;}
 
 
     // /**
@@ -211,15 +214,25 @@ public:
     //     return quads.at(element);
     // }
 
-    // Iterators for iterating over the quadrilaterals in the mesh
-    using quad_iterator = typename std::list<Quad<d>>::const_iterator;  
+    // Iterators for iterating over the cells in the mesh
+    using cell_iterator = typename std::list<Cell<d>>::const_iterator;  
 
-    quad_iterator begin() const {
-        return quads.begin();
+    cell_iterator cell_begin() const {
+        return cells.begin();
     }
 
-    quad_iterator end() const {
-        return quads.end();
+    cell_iterator cell_end() const {
+        return cells.end();
+    }
+
+    using vertex_iterator = typename std::vector<Vertex<d>>::const_iterator;
+
+    vertex_iterator vertex_begin() const {
+        return vertices.begin();
+    }
+
+    vertex_iterator vertex_end() const {
+        return vertices.end();
     }
 
 };
