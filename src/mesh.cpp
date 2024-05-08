@@ -1,45 +1,78 @@
 #include "mesh.hpp"
 
-#include <iostream>
+// // template specialization for 1D
+// template<>
+// void Mesh<1>::build_mesh(const double a, const double b, const int n) {
+//     vertices.clear();
+//     quads.clear();
+//     quad_to_vertex.clear();
+//     border_dofs.clear();
 
-mesh1d::mesh1d(double a, double b, int n) {
+//     // create vertices
+//     for (int i = 0; i < n + 1; i++) {
+//         vertices.push_back(Vertex<1>({a + i * (b - a) / n}));
+//     }
 
-    // n = number of vertices
-    // n-1 = number of elements
+//     // create quads
+//     for (int i = 0; i < n; i++) {
+//         quads.push_back(Quad<1>(i, vertices[i], vertices[i + 1]));
+//     }
 
-    this->nv = n+1;
-    this->nk = n;
+//     // create quad_to_vertex map
+//     quad_to_vertex.resize(n);
+//     for (int i = 0; i < n; i++) {
+//         quad_to_vertex[i] = i;
+//     }
 
-    h = (b - a) / (nk);
+//     // create border dofs
+//     border_dofs.push_back(0);
+//     border_dofs.push_back(n);
+// }
 
-    this->mesh_vertices.clear();
-    this->elements.clear();
-    this->mesh_vertices.resize(nv);
-    this->elements.resize(nk);
 
-    // Create vertices
-    for (int i = 0; i < nv; i++) {
-        const Rn x(a + i*h);  // x coordinate
-        (this->mesh_vertices)[i].x            = x;
-        (this->mesh_vertices)[i].glb_idx      = i;
-        (this->mesh_vertices)[i].vertex_label = 0;
+Mesh1D::Mesh1D(
+    const double a, 
+    const double b, 
+    const int n) 
+    {
+
+    nverts = n + 1;
+    nquads = n;
+    nbe = 2;
+
+    h = (b - a) / nquads;
+
+    vertices.resize(nverts);
+    quad_to_vertex.resize(n_verts_per_quad * nquads);
+    border_dofs.reserve(nbe);
+
+    // Create inner vertices
+    for (int i = 1; i < nverts - 1; i++) {
+        const Rd<1> x(a + i*h);  
+        vertices[i] = Vertex<1>(x, i, 0);
+        
     }
 
     // Mark the boundary vertices
-    (this->mesh_vertices)[0].vertex_label    = 1;
-    (this->mesh_vertices)[nv-1].vertex_label = 2;
+    vertices[0] = Vertex<1>(a, 0, 1);
+    vertices[nverts-1] = Vertex<1>(b, nverts-1, 2);
 
     border_dofs.push_back(0);
-    border_dofs.push_back(nv-1);
+    border_dofs.push_back(nverts-1);
 
     // Create elements
-    for (int i = 0; i < nk; i++) {
-        (this->elements)[i].elem_vertices = {std::make_shared<vert>(mesh_vertices[i]), std::make_shared<vert>(mesh_vertices[i + 1])};
-        (this->elements)[i].measure = h;
+    int l = 0;
+    for (int i = 0; i < nquads; i++) {
+
+        for (int j = 0; j < n_verts_per_quad; j++) {
+            quad_to_vertex[i * n_verts_per_quad + j] = i + j;
+        }
+
+        quads.push_back(Quad<1>(std::make_shared<Mesh1D>(*this), i, h));      
+    
     }
 
 
-
     return;
-};
 
+}

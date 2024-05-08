@@ -13,7 +13,7 @@ class basis_function {
 
 public:
 
-    typedef element<dim> FE;
+    typedef Quad<dim> FE;
     typedef Rd<dim> Rn;
 
     static const int D    = dim;        // space dimension

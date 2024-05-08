@@ -24,7 +24,8 @@ class problem {
 
     typedef std::map<std::pair<int, int>, double> matrix;
     typedef typename mesh::Rn Rn;
-    typedef typename mesh::elem elem;
+    typedef typename mesh::Element Quad;
+    //typedef typename mesh::quad_iterator iterator;
 
     std::shared_ptr<mesh> Th;
 

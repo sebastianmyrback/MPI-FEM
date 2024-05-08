@@ -3,6 +3,7 @@
 #include "export.hpp"
 #include "cg.hpp"
 #include "norm.hpp"
+
 #include "matplotlibcpp.h"
 namespace plt = matplotlibcpp;
 
@@ -64,20 +65,20 @@ int main() {
         
         lagrange_1d<1> psi;
         
-        mesh1d Th(a, b, n);
+        Mesh1D Th(a, b, n);
 
-        problem<mesh1d> prob(n_threads, std::make_shared<mesh1d>(Th));
+        problem<Mesh1D> prob(n_threads, std::make_shared<Mesh1D>(Th));
 
-        mesh_sizes.push_back(10*Th.h);
-        mesh_sizes2.push_back(10*Th.h*Th.h);
+        mesh_sizes.push_back(10*Th.get_h());
+        mesh_sizes2.push_back(10*Th.get_h()*Th.get_h());
 
         mesh_vertices.clear();
         uh.clear();
         uexact.clear();
         diff.clear();
-        for (int i = 0; i < Th.nv; i++) {
-            mesh_vertices.push_back(Th(i).x[0]);
-            uexact.push_back(u(Th(i).x));
+        for (int i = 0; i < Th.get_nverts(); i++) {
+            mesh_vertices.push_back(Th.get_vertices()[i][0]);
+            uexact.push_back(u(Th.get_vertices()[i][0]));
         }
 
         dirichlet_bc<1> bc;
@@ -96,14 +97,14 @@ int main() {
         const int max_iter = 1000;
 
         // Chose initial guess u0 as zeros
-        std::vector<double> u0(Th.nv, 0.);  
+        std::vector<double> u0(Th.get_nverts(), 0.);  
         
         // Solve the linear system using the conjugate gradient method
         uh = cg(prob.mat, prob.rhs, u0, max_iter, tol);
 
         // Compute the difference between the exact and approximate solution coefficients
         diff.clear();
-        for (int i = 0; i < Th.nv; i++) {
+        for (int i = 0; i < Th.get_nverts(); i++) {
             diff.push_back(uexact[i] - uh[i]);
         }
 

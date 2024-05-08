@@ -3,9 +3,15 @@
 
 #include <vector>
 #include <array>
+#include <list>
 #include <memory>
 #include <iostream>
 #include <assert.h>
+
+
+template<int d>
+struct Mesh;  // Forward declaration of Mesh
+
 
 template<int d>
 struct Rd {
@@ -104,94 +110,127 @@ struct Rd {
 
 };
 
+
 template<int d>
-struct vertex {
-    
-    Rd<d> x;                      // coordinates
-    
+struct Vertex : public Rd<d> {
+
+        
     int vertex_label, glb_idx;      // label and index
 
+    int boundary_label() const {return vertex_label;}
+    int global_index() const {return glb_idx;}
+
+    Vertex() : Rd<d>() {}
+
+    Vertex(const Rd<d> &r) : Rd<d>(r), vertex_label(0), glb_idx(0) {}
+
+    Vertex(const Rd<d> &r, const int idx, const int label) : Rd<d>(r), glb_idx(idx), vertex_label(label) {}
 };
 
+// Struct representing a quadrilateral element in dimension d 
 template<int d>
-struct base_element {
+struct Quad {
 
-    // Quadrilateral elements have 2^d nodes
-    static const int n_vertices = 1 << d;
+    // Access the vertex with local index vertex 
+    Vertex<d> vertex(int vertex) const {
+        assert(0 < vertex < n_verts_per_quad);
+        assert(0 < index < msh->get_nquads());
+        int vertex_index = msh->get_quad_to_vertex()[index*n_verts_per_quad + vertex];
 
-    // Pointers to the vertices of the element
-    std::vector<std::shared_ptr<vertex<d>>> elem_vertices;
-
-    const vertex<d> & operator()(int i) const {return *(elem_vertices.at(i));}
-
-    double measure;
-
-    virtual void operator()(const Rd<d> &xref, Rd<d> &x) const = 0;
-
-};
-
-// Template specialization for element
-
-template<int d>
-struct element : public base_element<d> {
-    element() {assert(false);}
-};
-
-template<>
-struct element<1> : public base_element<1> {
-    element() {
-        elem_vertices.resize(2);
+        return msh->get_vertices()[vertex_index];
     }
 
-    void operator()(const Rd<1> &xref, Rd<1> &x) const {
-        //x = elem_vertices[0]->x * (1.0 - xref[0]) + elem_vertices[1]->x * xref[0];
+    // Map a point from the reference element xref to the physical element X
+    void map_to_physical(const Rd<d> &xref, Rd<d> &x) const {
         
+        x = vertex(0) + xref[0] * (vertex(1) - vertex(0));
+    };
 
-        x = elem_vertices[0]->x + xref[0] * (elem_vertices[1]->x - elem_vertices[0]->x);
-        //Rd<1> x = elem_vertices[0]->x * (1.0 - xref[0]) + elem_vertices[1]->x * xref[0];
-    }
+    Quad() : msh(nullptr), index(0), measure(0.0) {}
+    Quad(std::shared_ptr<Mesh<d>> _msh) : msh(_msh), index(0), measure(0.0) {}
+    Quad(std::shared_ptr<Mesh<d>> _msh, int i) : msh(_msh), index(i), measure(0.0) {}
+    Quad(std::shared_ptr<Mesh<d>> _msh, int i, double m) : msh(_msh), index(i), measure(m) {}
+
+    int get_index() const {return index;}
+    double get_measure() const {return measure;}
+
+protected:
+    
+    std::shared_ptr<Mesh<d>> msh;
+    int index;      // index of the quad in the mesh
+    double measure; // measure of the quad (length, area, volume, etc.)
+
+    static const int n_verts_per_quad = 1 << d;   // number of vertices in a quadrilateral quad = 2^d
+
 };
 
+// Struct representing a quadrilateral mesh in dimension d
 template<int d>
-class mesh {
+struct Mesh {
+
+protected:
+
+    std::list<Quad<d>> quads;                     // list of quadrialterals
+    std::vector<int> border_dofs;                 // list of global border dofs
+    std::vector<int> quad_to_vertex;              // map index from quad to vertex
+    std::vector<Vertex<d>> vertices;              // list of vertices in the mesh
+
+    static const int n_verts_per_quad = 1 << d;   // number of vertices in a quadrilateral quad = 2^d
+
+    int nverts, nquads, nbe;                      // number of vertices, quadrilaterals and border elements in the mesh
+    double h;                                     // typical mesh size
 
 public:
-    
-        typedef vertex<d> vert;
-        typedef element<d> elem;
-        typedef Rd<d> Rn;
-        static const int D = d;
 
-        int nv, nk;                             // number of nodes and elements
-        double h;                               // typical mesh size
-        std::vector<vert> mesh_vertices;        // array of vertices
-        std::vector<elem> elements;             // array of elements
-        std::vector<int> border_dofs;           // list of global border dofs
+    typedef Quad<d> Element;
+    typedef Rd<d> Rn;
 
-        mesh() : nv(0), nk(0) {}
-    
-        const vert & operator()(int i) const {return mesh_vertices.at(i);} 
-        const elem & operator[](int i) const {return elements.at(i);} 
-    
-        //void build_mesh(double a, double b, int N);
+    int get_nverts() const {return nverts;}
+    int get_nquads() const {return nquads;}
+    int get_nbe() const {return nbe;}
+    double get_h() const {return h;}
+
+    std::vector<int> get_border_dofs() const {return border_dofs;}
+    std::vector<Vertex<d>> get_vertices() const {return vertices;}
+    std::vector<int> get_quad_to_vertex() const {return quad_to_vertex;}
+
+
+    // /**
+    //  * @brief Access the vertex with global index "vertex" 
+    //  * @param vertex: global index of the vertex
+    // */
+    // Vertex<d> vertex(int vertex) const {
+    //     return vertices.at(vertex);
+    // }
+
+    // /**
+    //  * @brief Access the element with global index "element" 
+    //  * @param element: global index of the element
+    // */
+    // Quad<d> quad(int element) const {
+    //     return quads.at(element);
+    // }
+
+    // Iterators for iterating over the quadrilaterals in the mesh
+    using quad_iterator = typename std::list<Quad<d>>::const_iterator;  
+
+    quad_iterator begin() const {
+        return quads.begin();
+    }
+
+    quad_iterator end() const {
+        return quads.end();
+    }
 
 };
 
 
-class mesh1d : public mesh<1> {
-public :
-    
-    mesh1d(double a, double b, int N);
-  
+
+struct Mesh1D : public Mesh<1> {
+
+    Mesh1D(const double a, const double b, const int n);
 };
 
-
-class mesh2d {
-public :
-  
-    mesh2d(double x0, double y0, double xend, double yend, int nx, int ny);
-
-};
 
 
 
