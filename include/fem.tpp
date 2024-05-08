@@ -72,7 +72,7 @@ void FEM<mesh>::assemble_FEM_matrix(
                 // subtract boundary conditions from rhs vector
                 for (int ipq = 0; ipq < n_quad_pts; ++ipq) {
 
-                    const Rn xq(qr[ipq].node);   // quadrature point in reference element
+                    const Point<dim> xq(qr[ipq].node);   // quadrature point in reference element
 
                     if (mass) {
                         psi.eval(xq, psi_vals);
@@ -139,7 +139,7 @@ template <int dim, int deg>
 void FEM<mesh>::assemble_rhs(
     const QuadratureRule<dim> &qr, 
     const BasisFunction<dim, deg> &psi, 
-    const std::function<double(const typename mesh::Rn &)> & f) 
+    double f(const Point<dim> &)) 
     {
 
     const int n_quad_pts = qr.n;                    // number of quadrature points
@@ -167,9 +167,9 @@ void FEM<mesh>::assemble_rhs(
         // Loop over quadrature points
         for (int ipq = 0; ipq < n_quad_pts; ++ipq) {
 
-            const Rn xq(qr[ipq].node);      // quadrature point in reference element
+            const Point<dim> xq(qr[ipq].node);      // quadrature point in reference element
 
-            Rn x;
+            Point<dim> x;
             cell->map_to_physical(xq, x);   // map xq to quadrature point in physical element x
 
             psi.eval(xq, psi_vals);         // evaluate psi at xq -> store in psi_vals

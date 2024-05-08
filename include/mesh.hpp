@@ -168,17 +168,14 @@ struct Mesh {
 
 protected:
 
-    int nverts, ncells, nbe;                      // number of vertices, quadrilaterals and border elements in the mesh
-    double h;                                     // typical mesh size
+    int nverts, ncells, nbe;               // number of vertices, quadrilaterals and border elements in the mesh
+    double h;                              // typical mesh size
 
-    std::list<Cell<dim>> cells;                     // list of cells in the mesh
-    std::vector<int> cell_to_vertex;                // map index from cell to vertex
-    std::vector<Vertex<dim>> vertices;                // list of vertices in the mesh
+    std::list<Cell<dim>> cells;            // list of cells in the mesh
+    std::vector<Vertex<dim>> vertices;     // list of vertices in the mesh
+    std::vector<int> cell_to_vertex;       // map index from cell to vertex
 
 public:
-
-    typedef Cell<dim> Element;
-    typedef Point<dim> Rn;
 
     int get_nverts() const {return nverts;}
     int get_ncells() const {return ncells;}

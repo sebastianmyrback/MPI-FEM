@@ -4,14 +4,12 @@
 #include "basis_functions.hpp"
 #include "quadrature.hpp"
 
-template <typename mesh, int d, int degree>
-static double L2H1norm(const mesh &Th, const QuadratureRule<d> &qr, const BasisFunction<d, degree> & psi, const std::vector<double> &u, const double l2, const double h1) {
+template <typename mesh, int dim, int degree>
+static double L2H1norm(const mesh &Th, const QuadratureRule<dim> &qr, const BasisFunction<dim, degree> & psi, const std::vector<double> &u, const double l2, const double h1) {
 
-    typedef typename mesh::Rn Rn;
 
     double val = 0.0;
 
-    static const int dim = d;
     const int n_quad_pts = qr.n;
 
     const int ndofs = psi.ndof;             // number of dofs per element
@@ -32,7 +30,7 @@ static double L2H1norm(const mesh &Th, const QuadratureRule<d> &qr, const BasisF
         // Loop over quadrature points
         for (int ipq = 0; ipq < n_quad_pts; ++ipq) {
 
-            const Rn xq(qr[ipq].node);   // quadrature point in reference element
+            const Point<dim> xq(qr[ipq].node);   // quadrature point in reference element
 
             if (l2) psi.eval(xq, psi_vals);
             if (h1) psi.eval_d(*cell, xq, dpsi_vals);

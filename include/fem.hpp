@@ -24,7 +24,6 @@ class FEM {
 
     typedef std::map<std::pair<int, int>, double> Matrix;
     typedef std::vector<double> Vector;
-    typedef typename mesh::Rn Rn;
 
     std::shared_ptr<mesh> Th;
 
@@ -48,10 +47,10 @@ public:
         assemble_FEM_matrix(qr, psi, mass, stiffness, bc);
     };
 
-    template <int d, int degree>
-    void assemble_rhs(const QuadratureRule<d> &qr, const BasisFunction<d, degree> & psi, const std::function<double(const typename mesh::Rn &)> & f);
+    template <int dim, int degree>
+    void assemble_rhs(const QuadratureRule<dim> &qr, const BasisFunction<dim, degree> & psi, double f(const Point<dim> &));
 
-    void set_dirichlet(const std::function<double(const typename mesh::Rn &)> & g);
+    //void set_dirichlet(const std::function<double(const typename mesh::Rn &)> & g);
 
 };
 
