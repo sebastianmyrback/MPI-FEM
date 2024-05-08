@@ -3,23 +3,34 @@
 #include "export.hpp"
 #include "cg.hpp"
 #include "norm.hpp"
-//#include "matplotlibcpp.h"
-//namespace plt = matplotlibcpp;
+#include "matplotlibcpp.h"
+namespace plt = matplotlibcpp;
 
-QuadratureRule<1> midpoint(1, {
+const QuadratureRule<1> midpoint(1, {
     QuadraturePoint<1>(Rd<1>({0.5}), 1.)
     });
 
-QuadratureRule<1> trapezoidal(2, {
+const QuadratureRule<1> trapezoidal(2, {
     QuadraturePoint<1>(Rd<1>({0.0}), 0.5), 
     QuadraturePoint<1>(Rd<1>({1.0}), 0.5)
     });
 
-QuadratureRule<1> simpson(3, {
+const QuadratureRule<1> simpson(3, {
     QuadraturePoint<1>(Rd<1>({0.0}), 1./3), 
     QuadraturePoint<1>(Rd<1>({0.5}), 1./3), 
     QuadraturePoint<1>(Rd<1>({1.0}), 1./3)
     });
+
+const QuadratureRule<1> gauss_lobatto6(6, {
+    QuadraturePoint<1>(Rd<1>({0.0}), 0.03333333333333333), 
+    QuadraturePoint<1>(Rd<1>({0.11747233803526763}), 0.1892374781489235), 
+    QuadraturePoint<1>(Rd<1>({0.3573842417596774}), 0.2774291885177432),
+    QuadraturePoint<1>(Rd<1>({0.6426157582403226}), 0.2774291885177432), 
+    QuadraturePoint<1>(Rd<1>({0.8825276619647324}), 0.1892374781489235), 
+    QuadraturePoint<1>(Rd<1>({1.0}), 0.03333333333333333)
+    });
+
+
 
 
 // define a function to be used as a source term f(x) = 8*pi^2*sin(2*pi*x)
@@ -39,7 +50,7 @@ int main() {
     const int n_refinements = 7;
     int n = 10;     // number of elements
     const int n_threads = 1;
-    const double a = -.6, b = 1.;
+    const double a = 0, b = 1.;
     
 
     std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.);
@@ -60,7 +71,10 @@ int main() {
         mesh_sizes.push_back(10*Th.h);
         mesh_sizes2.push_back(10*Th.h*Th.h);
 
-        std::vector<double> mesh_vertices, uh, uexact, diff;
+        mesh_vertices.clear();
+        uh.clear();
+        uexact.clear();
+        diff.clear();
         for (int i = 0; i < Th.nv; i++) {
             mesh_vertices.push_back(Th(i).x[0]);
             uexact.push_back(u(Th(i).x));
@@ -94,8 +108,8 @@ int main() {
         }
 
         // Compute the L2 and H1 errors
-        l2_errors[i] = L2H1norm(Th, trapezoidal, psi, diff, 1., 0.);
-        h1_errors[i] = L2H1norm(Th, trapezoidal, psi, diff, 0., 1.);
+        l2_errors[i] = L2H1norm(Th, gauss_lobatto6, psi, diff, 1., 0.);
+        h1_errors[i] = L2H1norm(Th, gauss_lobatto6, psi, diff, 0., 1.);
 
         n *= 2;
 
@@ -127,17 +141,17 @@ int main() {
 
 
 
-    // plt::plot(mesh_vertices, uh, "*", {{"label", "uh"}});
-    // plt::plot(mesh_vertices, uexact, {{"label", "u exact"}});
-    // plt::legend();
-    // plt::show();
+    plt::plot(mesh_vertices, uh, "*", {{"label", "uh"}});
+    plt::plot(mesh_vertices, uexact, {{"label", "u exact"}});
+    plt::legend();
+    plt::show();
 
-    // plt::loglog(mesh_sizes, mesh_sizes2, {{"label", "h^2"}});
-    // plt::loglog(mesh_sizes, mesh_sizes, {{"label", "h"}});
-    // plt::loglog(mesh_sizes, l2_errors, "*", {{"label", "L2 error"}});
-    // plt::loglog(mesh_sizes, h1_errors, "^", {{"label", "H1 error"}});
-    // plt::legend();
-    // plt::show();
+    plt::loglog(mesh_sizes, mesh_sizes2, {{"label", "h^2"}});
+    plt::loglog(mesh_sizes, mesh_sizes, {{"label", "h"}});
+    plt::loglog(mesh_sizes, l2_errors, "*", {{"label", "L2 error"}});
+    plt::loglog(mesh_sizes, h1_errors, "^", {{"label", "H1 error"}});
+    plt::legend();
+    plt::show();
 
     return 0;
 }

@@ -183,11 +183,7 @@ void problem<mesh>::assemble_rhs(const QuadratureRule<d> &qr, const basis_functi
             
             // Loop over dofs
             for (int i = 0; i < ndofs; i++) {
-                // std::cout << "loc2glb[i] = " << loc2glb[i] << std::endl;
-                // std::cout << "xq = " << xq << std::endl;
-                // std::cout << "x = " << x << std::endl;
-                // std::cout << "f(x) = " << f(x) << std::endl;
-                // getchar();
+            
                 rhs[loc2glb[i]] += psi_vals[i] * f(x) * qr[ipq].weight * measure;
             }
 
