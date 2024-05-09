@@ -1,5 +1,4 @@
-#ifndef GNUPLOT_HPP_
-#define GNUPLOT_HPP_
+#pragma once
 
 #include <string>
 #include <fstream>
@@ -89,4 +88,3 @@ namespace matlab {
 };   // namespace matlab
 
 
-#endif

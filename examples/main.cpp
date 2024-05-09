@@ -6,8 +6,8 @@
 #include <chrono>
 
 
-#include "matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+// #include "matplotlibcpp.h"
+// namespace plt = matplotlibcpp;
 
 const QuadratureRule<1> midpoint(1, {
     QuadraturePoint<1>(Point<1>({0.5}), 1.)
@@ -37,12 +37,12 @@ const QuadratureRule<1> gauss_lobatto6(6, {
 
 
 // define a function to be used as a source term f(x) = 8*pi^2*sin(2*pi*x)
-double f(const Point<1> & x) {
+const double f(const Point<1> & x) {
     //return 8.0 * M_PI * M_PI * sin(2.0 * M_PI * x[0]);
     return (M_PI*M_PI*(361*cos((19*M_PI*x[0])/10) - 441*cos((21*M_PI*x[0])/10)))/100;
 }
 
-double u(const Point<1> & x) {
+const double u(const Point<1> & x) {
     //return 2*sin(2.0 * M_PI * x[0]);
     return 2*sin(2*M_PI*x[0])*sin(M_PI*x[0]/10) + 10;
 }
@@ -84,7 +84,7 @@ int main() {
 
         for (auto vertex = Th.vertex_begin(); vertex != Th.vertex_end(); ++vertex) {
             mesh_vertices.push_back((*vertex)[0]);
-            uexact.push_back(u((*vertex)[0]));
+            uexact.push_back(u((*vertex)));
         }
 
         DirichletBC<1> bc;
@@ -95,10 +95,12 @@ int main() {
         const double mass = 0;
         const double stiffness = 1;
 
-        prob.assemble_rhs(midpoint, psi, f);
-        prob.assemble_FEM_matrix(midpoint, psi, mass, stiffness, bc);
+        //prob.assemble_rhs(midpoint, psi, f);
+        //prob.assemble_FEM_matrix(midpoint, psi, mass, stiffness, bc);
         //prob.assemble_FEM_matrix(trapezoidal, psi, mass, stiffness);
         
+        prob.assemble_stiffness_system(trapezoidal, psi, f, bc);
+
         const double tol = 1e-10;
         const int max_iter = 1000;
 

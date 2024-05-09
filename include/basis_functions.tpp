@@ -2,7 +2,7 @@ template<int degree>
 void P1Lagrange1D<degree>::eval(const Rn &x, std::vector<double> &phi) const {
     // x - quadrature point in reference element 
 
-    phi.resize(this->ndof);
+    phi.assign(this->ndof, 0);
     phi[0] = 1.0 - x[0];
     phi[1] = x[0];
 };

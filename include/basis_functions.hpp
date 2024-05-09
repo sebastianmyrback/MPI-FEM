@@ -1,5 +1,5 @@
-#ifndef BasisFunctionS_HPP
-#define BasisFunctionS_HPP
+#pragma once
+
 
 #include <iostream>
 #include <vector>
@@ -56,5 +56,3 @@ public:
 
 #include "basis_functions.tpp"
 
-
-#endif 

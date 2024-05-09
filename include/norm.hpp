@@ -1,5 +1,5 @@
-#ifndef NORM_HPP
-#define NORM_HPP
+#pragma once
+
 
 #include "basis_functions.hpp"
 #include "quadrature.hpp"
@@ -57,5 +57,3 @@ static double L2H1norm(const mesh &Th, const QuadratureRule<dim> &qr, const Basi
     return std::sqrt(val);
 
 }
-
-#endif // NORM_HPP

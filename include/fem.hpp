@@ -1,7 +1,8 @@
-#ifndef FEM_HPP
-#define FEM_HPP
+#pragma once
+
 
 #include <map>
+#include <unordered_map>
 #include <functional>
 #include "basis_functions.hpp"
 #include "quadrature.hpp"
@@ -38,24 +39,60 @@ public:
     FEM(const int thread_count, std::shared_ptr<mesh> Th)
         : thread_count(thread_count), n_dofs(0), Th(std::move(Th)) {}
 
+    // Assembly methods
+
     template <int dim, int degree>
-    void assemble_FEM_matrix(const QuadratureRule<dim> &qr, const BasisFunction<dim, degree> & psi, const double mass, const double stiffness, const DirichletBC<dim> & bc);
-    
+    void compute_stiffness_on_cell(
+        const typename mesh::cell_iterator &cell,
+        const std::vector<int> &loc2glb,
+        const QuadratureRule<dim> &qr,
+        const BasisFunction<dim, degree> &psi,
+        std::vector<std::vector<double>> &Ak); 
+
     template <int dim, int degree>
-    void assemble_FEM_matrix(const QuadratureRule<dim> &qr, const BasisFunction<dim, degree> & psi, const double mass, const double stiffness) {
+    void compute_rhs_on_cell(
+        const typename mesh::cell_iterator &cell,
+        const std::vector<int> &loc2glb,
+        const QuadratureRule<dim> &qr,
+        const BasisFunction<dim, degree> &psi,
+        const double f(const Point<dim> &),
+        std::vector<double> &fk);
+
+    template <int dim>
+    void get_boundary_data(
+        const typename mesh::cell_iterator &cell,
+        const std::vector<int> &loc2glb,
+        const DirichletBC<dim> &bc,
+        std::unordered_map<int, double> &boundary_data);
+
+    void distribute_local_to_global(
+        const typename mesh::cell_iterator &cell,
+        const std::vector<int> &loc2glb,
+        std::vector<std::vector<double>> &Ak,
+        std::vector<double> &fk,
+        const std::unordered_map<int, double> &boundary_data);
+
+    template <int dim, int degree>
+    void assemble_stiffness_system(
+        const QuadratureRule<dim> &qr, 
+        const BasisFunction<dim, degree> & psi, 
+        const double f(const Point<dim> &),
+        const DirichletBC<dim> & bc);
+
+    template <int dim, int degree>
+    void assemble_stiffness_system(
+        const QuadratureRule<dim> &qr, 
+        const BasisFunction<dim, degree> & psi, 
+        const double f(const Point<dim> &))
+    {
         DirichletBC<dim> bc;    // set_dirichlet defaults to false
-        assemble_FEM_matrix(qr, psi, mass, stiffness, bc);
+        assemble_stiffness_system(qr, psi, f, bc);
     };
 
-    template <int dim, int degree>
-    void assemble_rhs(const QuadratureRule<dim> &qr, const BasisFunction<dim, degree> & psi, double f(const Point<dim> &));
-
-    //void set_dirichlet(const std::function<double(const typename mesh::Rn &)> & g);
-
+    
 };
 
 
 
 #include "fem.tpp"
 
-#endif  // FEM_HPP

@@ -1,5 +1,5 @@
-#ifndef QUADRATURE_HPP
-#define QUADRATURE_HPP
+#pragma once
+
 
 #include "mesh.hpp"
 
@@ -43,5 +43,3 @@ public:
     }
 
 };
-
-#endif // QUADRATURE_HPP
