@@ -8,8 +8,6 @@ void FEM<mesh>::compute_stiffness_on_cell(
     std::vector<std::vector<double>> &Ak) 
 {
 
-    // This function computes the local stiffness matrix Ak on the current cell
-
     const int n_quad_pts = qr.n;
     const int dofs_per_cell = psi.ndof;
 
@@ -53,8 +51,6 @@ void FEM<mesh>::compute_rhs_on_cell(
     std::vector<double> &fk)
 {
 
-    // This function computes the local rhs vector fk on the current cell
-
     const int n_quad_pts = qr.n;
     const int dofs_per_cell = psi.ndof;
 
@@ -91,13 +87,8 @@ void FEM<mesh>::get_boundary_data(
     const typename mesh::cell_iterator &cell,
     const std::vector<int> &loc2glb,
     const DirichletBC<dim> &bc,
-    std::unordered_map<int, double> &boundary_data)
+    std::map<int, double> &boundary_data)
 {
-    
-    // This function checks if the current cell
-    // contains any boundary dofs and adds the corresponding
-    // global dof indices and boundary values to the boundary_data map.
-
     for (int i = 0; i < loc2glb.size(); i++) 
     {
         
@@ -119,13 +110,8 @@ void FEM<mesh>::distribute_local_to_global(
     const std::vector<int> &loc2glb,
     std::vector<std::vector<double>> &Ak,
     std::vector<double> &fk,
-    const std::unordered_map<int, double> &boundary_data)
+    const std::map<int, double> &boundary_data)
 {
-
-    // This function assembles the local stiffness matrix Ak and local rhs vector
-    // fk into the global matrix mat and global rhs vector rhs.
-    // Moreover, it applies strong Dirichlet boundary conditions to the system
-    // if the user has specified so in the DirichletBC object.
 
     if (loc2glb.size() != Ak.size() || loc2glb.size() != fk.size())
         throw std::invalid_argument("Mismatch in sizes of loc2glb, Ak, and fk");
@@ -215,7 +201,7 @@ void FEM<mesh>::assemble_stiffness_system(
         std::vector<double> fk;
         
 
-        std::unordered_map<int, double> boundary_data;
+        std::map<int, double> boundary_data;
 
         compute_stiffness_on_cell(cell, loc2glb, qr, psi, Ak);      
         compute_rhs_on_cell(cell, loc2glb, qr, psi, f, fk);

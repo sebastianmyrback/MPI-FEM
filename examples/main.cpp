@@ -6,8 +6,8 @@
 #include <chrono>
 
 
-// #include "matplotlibcpp.h"
-// namespace plt = matplotlibcpp;
+#include "matplotlibcpp.h"
+namespace plt = matplotlibcpp;
 
 const QuadratureRule<1> midpoint(1, {
     QuadraturePoint<1>(Point<1>({0.5}), 1.)
@@ -66,8 +66,9 @@ int main() {
         std::cout << i + 1 << " / " << n_refinements << std::endl;
         
         P1Lagrange1D<1> psi;
-        Mesh1D Th(a, b, n);
-        FEM<Mesh1D> prob(n_threads, std::make_shared<Mesh1D>(Th));
+        const Mesh1D Th(a, b, n);
+        //FEM<Mesh1D> prob(n_threads, std::make_shared<Mesh1D>(Th));
+        FEM<Mesh1D> prob(n_threads, &Th);
 
         mesh_sizes[i] = Th.get_h();
         mesh_vertices.clear();
@@ -130,6 +131,7 @@ int main() {
         matlab::save(uh, "uh.dat");
 
     }
+
 
     std::cout << "Mesh sizes: ";
     for (int i = 0; i < n_refinements; i++) {

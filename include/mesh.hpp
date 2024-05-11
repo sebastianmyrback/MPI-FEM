@@ -5,9 +5,9 @@
 #include <iostream>
 #include <assert.h>
 
-
 template<int dim>
 struct Mesh;  // Forward declaration of Mesh
+
 
 template<int dim>
 class Point {
@@ -35,18 +35,30 @@ public:
         return components[i];
     }
 
-    Point<dim> operator+(const Point<dim> &other) const;
-    Point<dim> operator-(const Point<dim> &other) const;
-    Point<dim> operator*(double scalar) const;
-    Point<dim> operator/(double scalar) const;
+    Point operator+(const Point &other) const;
+    Point operator-(const Point &other) const;
+    Point operator*(double scalar) const;
+    Point operator/(double scalar) const;
 
-    friend Point<dim> operator*(double scalar, const Point<dim> &v);
-    friend Point<dim> operator*(double scalar, const Point<dim> &v) {
+    // friend methods must be defined in the class block
+    // since the class is a template and hence only
+    // is created at run-time.
+
+    friend Point operator*(double scalar, const Point &v) 
+    {
         return v * scalar;
     }
-    friend std::ostream &operator<<(std::ostream &os, const Point<dim> &p);
+
+    friend std::ostream &operator<<(std::ostream &os, const Point &p) 
+    {
+        for (std::size_t i = 0; i < dim; i++) {
+            os << p.components[i] << ' ';
+        }
+        return os;
+    }
 
 };
+
 
 
 template<int dim>
@@ -96,7 +108,7 @@ struct Cell {
 
 protected:
 
-    Mesh<dim> *msh;
+    const Mesh<dim> *msh;
 
     std::size_t index;      // index of the cell in the mesh
     double measure; // measure of the cell (length, area, volume, etc.)
