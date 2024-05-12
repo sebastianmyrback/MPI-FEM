@@ -1,7 +1,5 @@
 #pragma once
 
-
-#include <map>
 #include <map>
 #include <functional>
 #include "basis_functions.hpp"
@@ -46,7 +44,7 @@ public:
     void compute_stiffness_on_cell(
         const typename mesh::cell_iterator &cell,
         const std::vector<int> &loc2glb,
-        const QuadratureRule<dim> &qr,
+        const quadrature::QuadratureRule<dim> &qr,
         const BasisFunction<dim, degree> &psi,
         std::vector<std::vector<double>> &Ak); 
 
@@ -55,7 +53,7 @@ public:
     void compute_rhs_on_cell(
         const typename mesh::cell_iterator &cell,
         const std::vector<int> &loc2glb,
-        const QuadratureRule<dim> &qr,
+        const quadrature::QuadratureRule<dim> &qr,
         const BasisFunction<dim, degree> &psi,
         const double f(const Point<dim> &),
         std::vector<double> &fk);
@@ -85,14 +83,14 @@ public:
     // The following function assembles the system using the functions above
     template <int dim, int degree>
     void assemble_stiffness_system(
-        const QuadratureRule<dim> &qr, 
+        const quadrature::QuadratureRule<dim> &qr, 
         const BasisFunction<dim, degree> & psi, 
         const double f(const Point<dim> &),
         const DirichletBC<dim> & bc);
 
     template <int dim, int degree>
     void assemble_stiffness_system(
-        const QuadratureRule<dim> &qr, 
+        const quadrature::QuadratureRule<dim> &qr, 
         const BasisFunction<dim, degree> & psi, 
         const double f(const Point<dim> &))
     {

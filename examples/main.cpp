@@ -5,33 +5,8 @@
 #include "norm.hpp"
 #include <chrono>
 
-
 // #include "matplotlibcpp.h"
 // namespace plt = matplotlibcpp;
-
-const QuadratureRule<1> midpoint(1, {
-    QuadraturePoint<1>(Point<1>({0.5}), 1.)
-    });
-
-const QuadratureRule<1> trapezoidal(2, {
-    QuadraturePoint<1>(Point<1>({0.0}), 0.5), 
-    QuadraturePoint<1>(Point<1>({1.0}), 0.5)
-    });
-
-const QuadratureRule<1> simpson(3, {
-    QuadraturePoint<1>(Point<1>({0.0}), 1./3), 
-    QuadraturePoint<1>(Point<1>({0.5}), 1./3), 
-    QuadraturePoint<1>(Point<1>({1.0}), 1./3)
-    });
-
-const QuadratureRule<1> gauss_lobatto6(6, {
-    QuadraturePoint<1>(Point<1>({0.0}), 0.03333333333333333), 
-    QuadraturePoint<1>(Point<1>({0.11747233803526763}), 0.1892374781489235), 
-    QuadraturePoint<1>(Point<1>({0.3573842417596774}), 0.2774291885177432),
-    QuadraturePoint<1>(Point<1>({0.6426157582403226}), 0.2774291885177432), 
-    QuadraturePoint<1>(Point<1>({0.8825276619647324}), 0.1892374781489235), 
-    QuadraturePoint<1>(Point<1>({1.0}), 0.03333333333333333)
-    });
 
 
 
@@ -50,6 +25,7 @@ const double u(const Point<1> & x) {
 
 int main() {
 
+    using namespace quadrature;
     auto start = std::chrono::high_resolution_clock::now();
 
     // Create a mesh object
@@ -100,7 +76,7 @@ int main() {
         //prob.assemble_FEM_matrix(midpoint, psi, mass, stiffness, bc);
         //prob.assemble_FEM_matrix(trapezoidal, psi, mass, stiffness);
         
-        prob.assemble_stiffness_system(trapezoidal, psi, f, bc);
+        prob.assemble_stiffness_system(midpoint, psi, f, bc);
 
         const double tol = 1e-10;
         const int max_iter = 1000;

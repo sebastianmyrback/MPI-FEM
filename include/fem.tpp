@@ -3,7 +3,7 @@ template <int dim, int degree>
 void FEM<mesh>::compute_stiffness_on_cell(
     const typename mesh::cell_iterator &cell,
     const std::vector<int> &loc2glb,
-    const QuadratureRule<dim> &qr,
+    const quadrature::QuadratureRule<dim> &qr,
     const BasisFunction<dim, degree> &psi,
     std::vector<std::vector<double>> &Ak) 
 {
@@ -45,7 +45,7 @@ template <int dim, int degree>
 void FEM<mesh>::compute_rhs_on_cell(
     const typename mesh::cell_iterator &cell,
     const std::vector<int> &loc2glb,
-    const QuadratureRule<dim> &qr,
+    const quadrature::QuadratureRule<dim> &qr,
     const BasisFunction<dim, degree> &psi,
     const double f(const Point<dim> &),
     std::vector<double> &fk)
@@ -172,7 +172,7 @@ void FEM<mesh>::distribute_local_to_global(
 template <typename mesh>
 template <int dim, int deg>
 void FEM<mesh>::assemble_stiffness_system(
-    const QuadratureRule<dim> &qr, 
+    const quadrature::QuadratureRule<dim> &qr, 
     const BasisFunction<dim, deg> &psi, 
     const double f(const Point<dim> &),
     const DirichletBC<dim> &bc) 
