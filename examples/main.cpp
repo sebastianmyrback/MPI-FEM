@@ -6,8 +6,8 @@
 #include <chrono>
 
 
-#include "matplotlibcpp.h"
-namespace plt = matplotlibcpp;
+// #include "matplotlibcpp.h"
+// namespace plt = matplotlibcpp;
 
 const QuadratureRule<1> midpoint(1, {
     QuadraturePoint<1>(Point<1>({0.5}), 1.)

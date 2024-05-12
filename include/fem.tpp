@@ -177,7 +177,10 @@ void FEM<mesh>::assemble_stiffness_system(
     const double f(const Point<dim> &),
     const DirichletBC<dim> &bc) 
 {
-    
+    // Improvements to do: 
+    // * pre-compute basis functions and its derivatives at quadrature points
+
+
     if (dim != Th->get_dim())
         throw std::invalid_argument("Mismatch in dimensions");
 
@@ -200,7 +203,6 @@ void FEM<mesh>::assemble_stiffness_system(
         std::vector<std::vector<double>> Ak;    
         std::vector<double> fk;
         
-
         std::map<int, double> boundary_data;
 
         compute_stiffness_on_cell(cell, loc2glb, qr, psi, Ak);      

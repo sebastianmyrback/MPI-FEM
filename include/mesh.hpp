@@ -68,10 +68,10 @@ class Vertex : public Point<dim> {
     std::size_t vertex_label, glb_idx;      // label and index
 
 public:
-    std::size_t boundary_label() const {return vertex_label;}
-    std::size_t global_index() const {return glb_idx;}
+    inline std::size_t boundary_label() const noexcept {return vertex_label;}
+    inline std::size_t global_index() const noexcept {return glb_idx;}
 
-    Vertex() : Point<dim>() {}
+    Vertex() : Point<dim>() {assert(false);}
 
     Vertex(const Point<dim> &p) : Point<dim>(p), vertex_label(0), glb_idx(0) {}
 
@@ -85,17 +85,15 @@ struct Cell {
     static constexpr std::size_t n_verts_per_cell = 1 << dim;   // number of vertices in a quadrilateral cell = 2^d
 
     // Access the vertex with local index vertex 
-    Vertex<dim> vertex(std::size_t vertex) const {
-        assert(vertex >= 0 && vertex < n_verts_per_cell);
-        assert(index >= 0 && index < msh->get_ncells());
-
+    inline const Vertex<dim> &vertex(std::size_t vertex) const {
+    
         std::size_t vertex_index = msh->get_cell_to_vertex()[index*n_verts_per_cell + vertex];
 
         return msh->get_vertices()[vertex_index];
     }
 
     // Map a point from the reference element xref to the physical element X
-    void map_to_physical(const Point<dim> &xref, Point<dim> &x) const {
+    inline void map_to_physical(const Point<dim> &xref, Point<dim> &x) const {
         
         x = vertex(0) + xref[0] * (vertex(1) - vertex(0));
     };
@@ -103,8 +101,8 @@ struct Cell {
     Cell() : msh(nullptr), index(0), measure(0.0) {assert(false);}
     Cell(Mesh<dim> *_msh, std::size_t i, double m) : msh(_msh), index(i), measure(m) {}
 
-    std::size_t get_index() const {return index;}
-    double get_measure() const {return measure;}
+    inline std::size_t get_index() const noexcept {return index;}
+    inline double get_measure() const noexcept {return measure;}
 
 protected:
 
@@ -130,15 +128,15 @@ protected:
 
 public:
 
-    const std::size_t get_nverts() const {return nverts;}
-    const std::size_t get_ncells() const {return ncells;}
-    const std::size_t get_nbe() const {return nbe;}
-    const std::size_t get_dim() const {return d;}
-    const double get_h() const {return h;}
+    const std::size_t get_nverts() const noexcept {return nverts;}
+    const std::size_t get_ncells() const noexcept {return ncells;}
+    const std::size_t get_nbe() const noexcept {return nbe;}
+    const std::size_t get_dim() const noexcept {return d;}
+    const double get_h() const noexcept {return h;}
 
 
-    const std::vector<Vertex<d>> & get_vertices() const {return vertices;}
-    const std::vector<std::size_t>& get_cell_to_vertex() const {return cell_to_vertex;}
+    const std::vector<Vertex<d>> & get_vertices() const noexcept {return vertices;}
+    const std::vector<std::size_t>& get_cell_to_vertex() const noexcept {return cell_to_vertex;}
 
 
     // Iterators for iterating over the cells in the mesh
