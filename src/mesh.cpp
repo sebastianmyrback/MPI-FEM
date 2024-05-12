@@ -1,45 +1,47 @@
 #include "mesh.hpp"
 
-#include <iostream>
+Mesh1D::Mesh1D(
+    const double a, 
+    const double b, 
+    const int n) 
+    {
 
-mesh1d::mesh1d(double a, double b, int n) {
+    nverts = n + 1;
+    ncells = n;
+    nbe = 2;
 
-    // n = number of vertices
-    // n-1 = number of elements
+    constexpr int n_verts_per_cell = 2;
 
-    this->nv = n+1;
-    this->nk = n;
+    h = (b - a) / ncells;
 
-    h = (b - a) / (nk);
+    vertices.reserve(nverts);
+    cells.reserve(ncells);
+    cell_to_vertex.assign(n_verts_per_cell * ncells, 0);
+    
+    vertices.push_back(Vertex<1>(Point<1>(a), 0, 1));
 
-    this->mesh_vertices.clear();
-    this->elements.clear();
-    this->mesh_vertices.resize(nv);
-    this->elements.resize(nk);
-
-    // Create vertices
-    for (int i = 0; i < nv; i++) {
-        const Rn x(a + i*h);  // x coordinate
-        (this->mesh_vertices)[i].x            = x;
-        (this->mesh_vertices)[i].glb_idx      = i;
-        (this->mesh_vertices)[i].vertex_label = 0;
+    // Create inner vertices
+    for (int i = 1; i < nverts - 1; i++) {
+        const Point<1> x(a + i*h);  
+        vertices.push_back(Vertex<1>(x, i, 0));        
     }
 
-    // Mark the boundary vertices
-    (this->mesh_vertices)[0].vertex_label    = 1;
-    (this->mesh_vertices)[nv-1].vertex_label = 2;
-
-    border_dofs.push_back(0);
-    border_dofs.push_back(nv-1);
+    vertices.push_back(Vertex<1>(Point<1>(b), nverts-1, 2));
 
     // Create elements
-    for (int i = 0; i < nk; i++) {
-        (this->elements)[i].elem_vertices = {std::make_shared<vert>(mesh_vertices[i]), std::make_shared<vert>(mesh_vertices[i + 1])};
-        (this->elements)[i].measure = h;
-    }
+    for (int i = 0; i < ncells; i++) {
 
+        for (int j = 0; j < n_verts_per_cell; j++) {
+            cell_to_vertex[i * n_verts_per_cell + j] = i + j;
+        }
+
+        cells.push_back(Cell<1>(this, i, h));    
+    }
 
 
     return;
-};
 
+}
+
+
+// Todo: implement Mesh2D constructor   

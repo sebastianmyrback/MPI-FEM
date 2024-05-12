@@ -1,5 +1,4 @@
-#ifndef GNUPLOT_HPP_
-#define GNUPLOT_HPP_
+#pragma once
 
 #include <string>
 #include <fstream>
@@ -8,6 +7,20 @@
 
 namespace gnuplot {
 
+template<int dim>
+void write_cells(const Mesh<dim> &Th, std::string filename = "Th.dat") {
+
+    std::ofstream plot;
+    plot.open(filename.c_str(), std::ofstream::out);
+    
+    for (auto cell = Th.cell_begin(); cell != Th.cell_end(); ++cell) {
+        for (int i = 0; i < cell->n_verts_per_cell; ++i) {
+            plot << cell->vertex(i) << std::endl;
+        }
+    }
+    
+    plot.close();
+}
 
 // void save(const mesh1d &Th, std::string filename = "Th.dat") {
 
@@ -75,4 +88,3 @@ namespace matlab {
 };   // namespace matlab
 
 
-#endif

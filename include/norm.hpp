@@ -1,18 +1,15 @@
-#ifndef NORM_HPP
-#define NORM_HPP
+#pragma once
+
 
 #include "basis_functions.hpp"
 #include "quadrature.hpp"
 
-template <typename mesh, int d, int degree>
-static double L2H1norm(const mesh &Th, const QuadratureRule<d> &qr, const basis_function<d, degree> & psi, const std::vector<double> &u, const double l2, const double h1) {
+template <typename mesh, int dim, int degree>
+static double L2H1norm(const mesh &Th, const QuadratureRule<dim> &qr, const BasisFunction<dim, degree> & psi, const std::vector<double> &u, const double l2, const double h1) {
 
-    typedef typename mesh::Rn Rn;
-    typedef typename mesh::elem elem;
 
     double val = 0.0;
 
-    static const int dim = d;
     const int n_quad_pts = qr.n;
 
     const int ndofs = psi.ndof;             // number of dofs per element
@@ -21,25 +18,24 @@ static double L2H1norm(const mesh &Th, const QuadratureRule<d> &qr, const basis_
 
 
     // Loop over all elements
-    for (int k = 0; k < Th.nk; k++) {
-
-        // Get the current element
-        const elem & K = Th[k];
+    //for (int k = 0; k < Th.nk; k++) {
+    for (auto cell = Th.cell_begin(); cell != Th.cell_end(); ++cell) 
+    {
 
         // Create map from local to global dofs
         std::vector<int> loc2glb(ndofs);
         for (int i=0; i<ndofs; i++)
-            loc2glb[i] = K.elem_vertices[i]->glb_idx;
+            loc2glb[i] = cell->vertex(i).global_index();
 
         // Loop over quadrature points
         for (int ipq = 0; ipq < n_quad_pts; ++ipq) {
 
-            const Rn xq(qr[ipq].node);   // quadrature point in reference element
+            const Point<dim> xq(qr[ipq].node);   // quadrature point in reference element
 
             if (l2) psi.eval(xq, psi_vals);
-            if (h1) psi.eval_d(K, xq, dpsi_vals);
+            if (h1) psi.eval_d(*cell, xq, dpsi_vals);
 
-            const double cint = qr[ipq].weight * K.measure;
+            const double cint = qr[ipq].weight * cell->get_measure();
 
             double uk = 0.;
 
@@ -61,5 +57,3 @@ static double L2H1norm(const mesh &Th, const QuadratureRule<d> &qr, const basis_
     return std::sqrt(val);
 
 }
-
-#endif // NORM_HPP
