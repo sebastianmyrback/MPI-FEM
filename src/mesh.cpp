@@ -175,8 +175,16 @@ const std::vector<std::vector<size_t>> Mesh1D::get_distribution() {
 
     std::vector<std::vector<size_t>> dof_distribution(nsubdomains);
 
-    for (int i = 0; i < ncells; i++) {
-        dof_distribution[cells[i].get_subdomain()].push_back(i);
+    for (auto cell = this->cell_begin(); cell != this->cell_end(); ++cell) {
+
+        for (int n = 0; n < cell->n_verts_per_cell; n++) {
+            const size_t glb_idx = cell_to_vertex[cell->n_verts_per_cell*cell->get_index() + n];
+
+            // add glb_idx to correct subdomain list if it's not already there
+            if (std::find(dof_distribution[cell->get_subdomain()].begin(), dof_distribution[cell->get_subdomain()].end(), glb_idx) == dof_distribution[cell->get_subdomain()].end())
+                dof_distribution[cell->get_subdomain()].push_back(glb_idx);
+            
+        }
     }
 
     return dof_distribution;

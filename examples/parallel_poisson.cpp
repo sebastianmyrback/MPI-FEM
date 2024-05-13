@@ -54,6 +54,7 @@ namespace parallel_poisson
 
         void get_boundary_data(
             const typename Mesh1D::cell_iterator &cell, 
+            const std::vector<size_t> &loc2glb,
             std::map<int, double> &boundary_data);   
 
 
@@ -63,7 +64,7 @@ namespace parallel_poisson
         void compute_errors();
         void output_results() const;
 
-        std::vector<size_t> loc2glb;
+        std::vector<size_t> my_global_dofs;
 
         SparseMatrix system_matrix;
         Vector       system_rhs;
@@ -177,6 +178,7 @@ namespace parallel_poisson
 
     void Poisson1D::get_boundary_data(
         const typename Mesh1D::cell_iterator &cell,
+        const std::vector<size_t> &loc2glb,
         std::map<int, double> &boundary_data)
     {
         for (int i = 0; i < loc2glb.size(); i++) 
@@ -198,11 +200,23 @@ namespace parallel_poisson
         const std::vector<std::vector<size_t>> dof_distribution
         = mesh.get_distribution();  // index_distribution[p][i] = global index of local dof i on process p
 
-        loc2glb = dof_distribution[this_mpi_process];
+        my_global_dofs = dof_distribution[this_mpi_process];
 
-        system_rhs.assign(loc2glb.size(), 0.0);
-        solution.assign(loc2glb.size(), 0.0);
+        // for (int i = 0; i < loc2glb.size(); i++)
+        //     std::cout << loc2glb[i] << " ";
+        // std::cout << std::endl;
+
+        for (const auto & dof : my_global_dofs)
+            std::cout << dof << " ";
+        std::cout << std::endl;
+
+        getchar();
+
+        system_rhs.assign(my_global_dofs.size(), 0.0);
+        solution.assign(my_global_dofs.size(), 0.0);
         system_matrix.clear();
+
+        
         
         // const std::size_t n_dofs = mesh.n_cells() + 1;
         // system_matrix.resize(n_dofs, n_dofs, 0.0);
@@ -225,11 +239,15 @@ namespace parallel_poisson
         for (auto cell = mesh.cell_begin(); cell != mesh.cell_end(); ++cell) 
             if (cell->get_subdomain() == this_mpi_process) {
 
+                std::vector<size_t> loc2glb(dofs_per_cell);
+                for (size_t i = 0; i < dofs_per_cell; ++i) 
+                    loc2glb[i] = cell->vertex(i).global_index();
+
                 compute_stiffness_on_cell(cell, Ak);      
                 
                 compute_rhs_on_cell(cell, fk);
                 
-                get_boundary_data(cell, boundary_data);
+                get_boundary_data(cell, loc2glb, boundary_data);
                 
                 utilities::distribute_local_to_global(
                     Ak, 
