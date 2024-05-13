@@ -2,33 +2,22 @@
 
 #include <map>
 #include <functional>
-#include "basis_functions.hpp"
-#include "quadrature.hpp"
-
-template <int d>
-struct DirichletBC {
-
-    typedef Point<d> Rn;
-
-    std::function<double(const Rn &)> g;    // Dirichlet boundary function
-    std::vector<int> lbs;                   // labels of Dirichlet boundaries
-    bool set_dirichlet = false;             // if false, no Dirichlet boundary condition is set strongly
+#include "../fe/basis_functions.hpp"
+#include "../quadrature/quadrature.hpp"
+#include "../utilities/data_structures.hpp"
+#include "../utilities/utils.hpp"
 
 
-};
 
 
 template <typename mesh>
 class FEM {
 
-    typedef std::map<std::pair<int, int>, double> Matrix;
-    typedef std::vector<double> Vector;
-
     const mesh* Th;
 
 public:
 
-    Matrix mat;              // System matrix 
+    SparseMatrix mat;              // System matrix 
     Vector rhs;              // Right hand side vector
 
     const int thread_count;  // Number of threads to use
@@ -46,7 +35,7 @@ public:
         const std::vector<int> &loc2glb,
         const quadrature::QuadratureRule<dim> &qr,
         const BasisFunction<dim, degree> &psi,
-        std::vector<std::vector<double>> &Ak); 
+        DenseMatrix &Ak); 
 
     // Compute the local rhs vector on a cell
     template <int dim, int degree>
@@ -56,7 +45,7 @@ public:
         const quadrature::QuadratureRule<dim> &qr,
         const BasisFunction<dim, degree> &psi,
         const double f(const Point<dim> &),
-        std::vector<double> &fk);
+        Vector &fk);
 
     // This function checks if the current cell
     // contains any boundary dofs and adds the corresponding
@@ -65,7 +54,7 @@ public:
     void get_boundary_data(
         const typename mesh::cell_iterator &cell,
         const std::vector<int> &loc2glb,
-        const DirichletBC<dim> &bc,
+        const utilities::DirichletBC<dim> &bc,
         std::map<int, double> &boundary_data);
 
     // This function adds the local stiffness matrix Ak and local rhs vector
@@ -75,8 +64,8 @@ public:
     void distribute_local_to_global(
         const typename mesh::cell_iterator &cell,
         const std::vector<int> &loc2glb,
-        std::vector<std::vector<double>> &Ak,
-        std::vector<double> &fk,
+        DenseMatrix &Ak,
+        Vector &fk,
         const std::map<int, double> &boundary_data);
 
 
@@ -86,7 +75,7 @@ public:
         const quadrature::QuadratureRule<dim> &qr, 
         const BasisFunction<dim, degree> & psi, 
         const double f(const Point<dim> &),
-        const DirichletBC<dim> & bc);
+        const utilities::DirichletBC<dim> & bc);
 
     template <int dim, int degree>
     void assemble_stiffness_system(
@@ -94,7 +83,7 @@ public:
         const BasisFunction<dim, degree> & psi, 
         const double f(const Point<dim> &))
     {
-        DirichletBC<dim> bc;    // set_dirichlet defaults to false
+        utilities::DirichletBC<dim> bc;    // set_dirichlet defaults to false
         assemble_stiffness_system(qr, psi, f, bc);
     };
 

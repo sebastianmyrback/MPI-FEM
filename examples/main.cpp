@@ -1,8 +1,8 @@
 #include <iostream>
-#include "fem.hpp"
-#include "export.hpp"
-#include "cg.hpp"
-#include "norm.hpp"
+#include "fe/fem.hpp"
+#include "utilities/export.hpp"
+#include "utilities/norm.hpp"
+#include "solve/cg.hpp"
 #include <chrono>
 
 // #include "matplotlibcpp.h"
@@ -33,9 +33,10 @@ int main() {
     int n = 10;     // number of elements
     const int n_threads = 1;
     const double a = -0.63, b = 5.27;
+    //const double a = 0., b = 1.;
     
     std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.), mesh_sizes(n_refinements, 0.), mesh_sizes_sq(n_refinements, 0.);
-    std::vector<double> mesh_vertices, uh, uexact, diff;
+    Vector mesh_vertices, uh, uexact, diff;
 
     for (int i = 0; i < n_refinements; i++) {
 
@@ -47,51 +48,33 @@ int main() {
         FEM<Mesh1D> prob(n_threads, &Th);
 
         mesh_sizes[i] = Th.get_h();
-        mesh_vertices.clear();
-        uh.clear();
-        uexact.clear();
-        diff.clear();
+        
+        mesh_vertices.assign(Th.get_nverts(), 0.);
+        uh.assign(Th.get_nverts(), 0.);
+        uexact.assign(Th.get_nverts(), 0.);
+        diff.assign(Th.get_nverts(), 0.);
+        
 
-        // for (auto cell = Th.cell_begin(); cell != Th.cell_end(); ++cell) {
-        //     for (int v = 0; v < Cell<1>::n_verts_per_cell; v++) {
-        //         mesh_vertices.push_back(cell->vertex(v)[0]);
-        //         uexact.push_back(u(cell->vertex(v)));
-        //     }
-        // }
-
-        for (auto vertex = Th.vertex_begin(); vertex != Th.vertex_end(); ++vertex) {
-            mesh_vertices.push_back((*vertex)[0]);
-            uexact.push_back(u((*vertex)));
+        for (int v = 0; v < Th.get_nverts(); v++) {
+            mesh_vertices[v] = Th.get_vertices()[v][0];
+            uexact[v] = u(Th.get_vertices()[v]);
         }
 
-        DirichletBC<1> bc;
+        utilities::DirichletBC<1> bc;
         bc.g = u;
         bc.lbs = {1, 2};
         bc.set_dirichlet = true;
 
-        const double mass = 0;
-        const double stiffness = 1;
-
-        //prob.assemble_rhs(midpoint, psi, f);
-        //prob.assemble_FEM_matrix(midpoint, psi, mass, stiffness, bc);
-        //prob.assemble_FEM_matrix(trapezoidal, psi, mass, stiffness);
-        
         prob.assemble_stiffness_system(midpoint, psi, f, bc);
 
         const double tol = 1e-10;
         const int max_iter = 1000;
 
-        // Chose initial guess u0 as zeros
-        std::vector<double> u0(Th.get_nverts(), 0.);  
-        
-        // Solve the linear system using the conjugate gradient method
-        uh = cg(prob.mat, prob.rhs, u0, max_iter, tol);
+        const int cg_iterations = solve::cg(prob.mat, prob.rhs, uh, max_iter, tol);
 
-        // Compute the difference between the exact and approximate solution coefficients
-        diff.clear();
-        for (int i = 0; i < Th.get_nverts(); i++) {
-            diff.push_back(uexact[i] - uh[i]);
-        }
+        diff = uexact - uh;
+
+        std::cout << "CG iterations: " << cg_iterations << std::endl;
 
         // Compute the L2 and H1 errors
         l2_errors[i] = L2H1norm(Th, gauss_lobatto6, psi, diff, 1., 0.);

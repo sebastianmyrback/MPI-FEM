@@ -3,7 +3,7 @@
 #include <string>
 #include <fstream>
 #include <iomanip>
-#include "mesh.hpp"
+#include "../mesh/mesh.hpp"
 
 namespace gnuplot {
 
@@ -61,16 +61,21 @@ void write_cells(const Mesh<dim> &Th, std::string filename = "Th.dat") {
 
 namespace matlab {
     
-    template <class A>
-    void save(std::map<std::pair<A, A>, double> &dF, std::string filename) {
+    void save(std::map<std::pair<int, int>, double> &dF, std::string filename) {
     std::ofstream plot;
     plot.open(filename.c_str(), std::ofstream::out);
     plot << std::setprecision(16);
-    for (std::map<std::pair<int, int>, double>::const_iterator q = dF.begin();
-            q != dF.end(); ++q) {
+
+    for (auto q = dF.begin(); q != dF.end(); ++q) {
         plot << q->first.first + 1 << "\t" << q->first.second + 1 << "\t"
             << q->second << std::endl;
     }
+
+    // for (std::map<std::pair<int, int>, double>::const_iterator q = dF.begin();
+    //         q != dF.end(); ++q) {
+    //     plot << q->first.first + 1 << "\t" << q->first.second + 1 << "\t"
+    //         << q->second << std::endl;
+    // }
     plot.close();
     }
 

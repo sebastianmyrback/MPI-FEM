@@ -1,8 +1,8 @@
 #pragma once
 
 
-#include "basis_functions.hpp"
-#include "quadrature.hpp"
+#include "../fe/basis_functions.hpp"
+#include "../quadrature/quadrature.hpp"
 
 template <typename mesh, int dim, int degree>
 static double L2H1norm(const mesh &Th, const quadrature::QuadratureRule<dim> &qr, const BasisFunction<dim, degree> & psi, const std::vector<double> &u, const double l2, const double h1) {
@@ -13,8 +13,8 @@ static double L2H1norm(const mesh &Th, const quadrature::QuadratureRule<dim> &qr
     const int n_quad_pts = qr.n;
 
     const int ndofs = psi.ndof;             // number of dofs per element
-    std::vector<double> psi_vals(ndofs);    // container for evaluations of psi
-    std::vector<std::vector<double>> dpsi_vals(ndofs, std::vector<double>(dim, 0.));    // ndofs x dim matrix
+    Vector psi_vals(ndofs);    // container for evaluations of psi
+    DenseMatrix dpsi_vals(ndofs, dim);    // ndofs x dim matrix
 
 
     // Loop over all elements

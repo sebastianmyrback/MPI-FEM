@@ -1,4 +1,4 @@
-#include "quadrature.hpp"
+#include "../include/quadrature/quadrature.hpp"
 
 // typedef quadrature::QuadratureRule<1>::QP QP;
 

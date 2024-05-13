@@ -1,4 +1,4 @@
-#include "mesh.hpp"
+#include "../include/mesh/mesh.hpp"
 
 Mesh1D::Mesh1D(
     const double a, 
@@ -42,6 +42,37 @@ Mesh1D::Mesh1D(
     return;
 
 }
+
+
+void Mesh1D::mesh_info(const bool detailed) 
+{
+
+    std::cout << "Number of vertices: \t \t" << nverts << std::endl;
+    std::cout << "Number of cells: \t \t" << ncells << std::endl;
+    std::cout << "Number of boundary elements: \t" << nbe << std::endl;
+    std::cout << "Number of MPI processes: \t" << nsubdomains << std::endl;
+    std::cout << "Mesh dimension: \t \t" << dim << std::endl;
+    std::cout << "Mesh size: \t \t \t" << h << std::endl;
+    std::cout << std::endl;
+    
+
+    if (detailed) 
+    {
+        for (auto cell = this->cell_begin(); cell != this->cell_end(); ++cell) 
+        {
+            std::cout << "Cell index " << cell->get_index() << std::endl;
+            std::cout << "Cell subdomain " << cell->get_subdomain() << std::endl;
+            std::cout << "Cell vertex 1 " << cell->vertex(0) << std::endl;
+            std::cout << "Cell vertex 2 " << cell->vertex(1) << std::endl;
+            std::cout << "Cell measure " << cell->get_measure() << std::endl;
+            std::cout << std::endl;
+        }
+    }
+
+
+
+}
+
 
 void Mesh1D::refine_mesh() {
 
@@ -119,16 +150,35 @@ void Mesh1D::partition(const size_t n_mpi_processes) {
     const size_t nremain = ncells % n_mpi_processes;      // remainder
     
     size_t process = 0;
+    size_t cells_for_this_process = 0;
     for (int i = 0; i < ncells; ++i) 
     {
         cells[i].set_subdomain(process);
 
-        if ((i + 1) % nblocks == 0 && (nremain == 0 || process >= nremain)) {
+        cells_for_this_process++;
+        if (cells_for_this_process >= nblocks + (process < nremain ? 1 : 0)) {
             ++process;
+            cells_for_this_process = 0;
         }
     }
 
-    return;
+    nsubdomains = n_mpi_processes;
 
+    return;
 }
 
+
+const std::vector<std::vector<size_t>> Mesh1D::get_distribution() {
+
+    // Return a vector of vectors containing the global indices
+    // of the local dofs on each process
+
+    std::vector<std::vector<size_t>> dof_distribution(nsubdomains);
+
+    for (int i = 0; i < ncells; i++) {
+        dof_distribution[cells[i].get_subdomain()].push_back(i);
+    }
+
+    return dof_distribution;
+
+}

@@ -5,16 +5,16 @@ void FEM<mesh>::compute_stiffness_on_cell(
     const std::vector<int> &loc2glb,
     const quadrature::QuadratureRule<dim> &qr,
     const BasisFunction<dim, degree> &psi,
-    std::vector<std::vector<double>> &Ak) 
+    DenseMatrix &Ak) 
 {
 
     const int n_quad_pts = qr.n;
     const int dofs_per_cell = psi.ndof;
 
-    Ak.assign(dofs_per_cell, std::vector<double>(dofs_per_cell, 0.0));
+    Ak.reinit(0.);
 
     // Holder for evaluations of the gradient of psi
-    std::vector<std::vector<double>> dpsi_vals(dofs_per_cell, std::vector<double>(dim, 0.));    // dofs_per_cell x space dim
+    DenseMatrix dpsi_vals(dofs_per_cell, dim);
 
     const double measure = cell->get_measure();
 
@@ -32,7 +32,7 @@ void FEM<mesh>::compute_stiffness_on_cell(
 
                 for (int dm = 0; dm < dim; dm++)     // loop over space dimensions
                 { 
-                    Ak[i][j] += qr[ipq].weight * measure * dpsi_vals[i][dm] * dpsi_vals[j][dm];
+                    Ak(i, j) += qr[ipq].weight * measure * dpsi_vals(i, dm) * dpsi_vals(j, dm);
                 }       
             }
         }
@@ -48,15 +48,15 @@ void FEM<mesh>::compute_rhs_on_cell(
     const quadrature::QuadratureRule<dim> &qr,
     const BasisFunction<dim, degree> &psi,
     const double f(const Point<dim> &),
-    std::vector<double> &fk)
+    Vector &fk)
 {
 
     const int n_quad_pts = qr.n;
     const int dofs_per_cell = psi.ndof;
 
-    fk.assign(dofs_per_cell, 0.0);
+    fk.reinit(0.0);
 
-    std::vector<double> psi_vals(dofs_per_cell);    // container for evaluations of psi
+    Vector psi_vals(dofs_per_cell);    // container for evaluations of psi
 
     // Get the measure of the element
     const double measure = cell->get_measure();
@@ -86,7 +86,7 @@ template <int dim>
 void FEM<mesh>::get_boundary_data(
     const typename mesh::cell_iterator &cell,
     const std::vector<int> &loc2glb,
-    const DirichletBC<dim> &bc,
+    const utilities::DirichletBC<dim> &bc,
     std::map<int, double> &boundary_data)
 {
     for (int i = 0; i < loc2glb.size(); i++) 
@@ -108,8 +108,8 @@ template<typename mesh>
 void FEM<mesh>::distribute_local_to_global(
     const typename mesh::cell_iterator &cell,
     const std::vector<int> &loc2glb,
-    std::vector<std::vector<double>> &Ak,
-    std::vector<double> &fk,
+    DenseMatrix &Ak,
+    Vector &fk,
     const std::map<int, double> &boundary_data)
 {
 
@@ -121,7 +121,7 @@ void FEM<mesh>::distribute_local_to_global(
     {
 
         // Add local rhs vector to global rhs vector
-        rhs[loc2glb[i]] += fk[i];
+        rhs(loc2glb[i]) += fk(i);
 
         
         // Check if dof i is a Dirichlet dof
@@ -133,7 +133,7 @@ void FEM<mesh>::distribute_local_to_global(
         for (int j = 0; j < loc2glb.size(); j++)
         {
         
-            avg_diag += Ak[j][j] / loc2glb.size();
+            avg_diag += Ak(j, j) / loc2glb.size();
 
             // Check if dof j is a Dirichlet dof
             bool is_col_dof_dirichlet = false;
@@ -147,23 +147,23 @@ void FEM<mesh>::distribute_local_to_global(
                 // Subtract dirichlet column of A times boundary value from rhs
                 if (is_col_dof_dirichlet) 
                 {
-                    rhs[loc2glb[i]] -= Ak[i][j] * boundary_data.at(loc2glb[j]);
+                    rhs(loc2glb[i]) -= Ak(i, j) * boundary_data.at(loc2glb[j]);
                 }
 
                 // Set local row and column to zero
-                Ak[i][j] = 0.0;
+                Ak(i, j) = 0.0;
 
                 // Set diagonal entry to average of all other local diagonal entries
                 // modify rhs accordingly
                 if (i == j) 
                 {
-                    Ak[i][j] = avg_diag;
-                    rhs[loc2glb[i]] = avg_diag * boundary_data.at(loc2glb[j]);
+                    Ak(i, j) = avg_diag;
+                    rhs(loc2glb[i]) = avg_diag * boundary_data.at(loc2glb[j]);
                 }
             }
 
             // Add local matrix entry to global matrix
-            mat[std::make_pair(loc2glb[i], loc2glb[j])] += Ak[i][j];
+            mat.add(loc2glb[i], loc2glb[j], Ak(i, j));
             
         }
     }
@@ -175,22 +175,25 @@ void FEM<mesh>::assemble_stiffness_system(
     const quadrature::QuadratureRule<dim> &qr, 
     const BasisFunction<dim, deg> &psi, 
     const double f(const Point<dim> &),
-    const DirichletBC<dim> &bc) 
+    const utilities::DirichletBC<dim> &bc) 
 {
     // Improvements to do: 
     // * pre-compute basis functions and its derivatives at quadrature points
 
 
-    if (dim != Th->get_dim())
+    if (dim != mesh::dim)
         throw std::invalid_argument("Mismatch in dimensions");
 
     if (!mat.empty())
         throw std::runtime_error("Matrix is not empty");
 
     
-    rhs.assign(Th->get_nverts(), 0);
-
+    rhs.assign(Th->get_nverts(), 0.0);
+    
     const int dofs_per_cell = psi.ndof;
+
+    DenseMatrix Ak(dofs_per_cell, dofs_per_cell);    
+    Vector fk(dofs_per_cell);
 
     // Loop over all cells in the mesh
     for (auto cell = Th->cell_begin(); cell != Th->cell_end(); ++cell) 
@@ -199,9 +202,6 @@ void FEM<mesh>::assemble_stiffness_system(
         std::vector<int> loc2glb(dofs_per_cell);    
         for (int i = 0; i < dofs_per_cell; i++) 
             loc2glb[i] = cell->vertex(i).global_index();
-
-        std::vector<std::vector<double>> Ak;    
-        std::vector<double> fk;
         
         std::map<int, double> boundary_data;
 

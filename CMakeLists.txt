@@ -13,6 +13,8 @@ file(GLOB SOURCES "src/*.cpp")
 add_library(TensorFEM SHARED ${SOURCES})
 
 add_executable(main examples/main.cpp)
+add_executable(ppoisson1d examples/parallel_poisson.cpp)
 
 target_link_libraries(main TensorFEM ${Python3_LIBRARIES})
+target_link_libraries(ppoisson1d TensorFEM)
 

@@ -1,5 +1,5 @@
 template<int degree>
-void P1Lagrange1D<degree>::eval(const Rn &x, std::vector<double> &phi) const {
+void P1Lagrange1D<degree>::eval(const Rn &x, Vector &phi) const {
     // x - quadrature point in reference element 
 
     phi.assign(this->ndof, 0);
@@ -8,7 +8,7 @@ void P1Lagrange1D<degree>::eval(const Rn &x, std::vector<double> &phi) const {
 };
 
 template<int degree>
-void P1Lagrange1D<degree>::eval_d(const FE &K, const Rn &x, std::vector<std::vector<double>> &dphi) const {
+void P1Lagrange1D<degree>::eval_d(const FE &K, const Rn &x, DenseMatrix &dphi) const {
     // K - physical element
     // x - quadrature point in reference element
     // dphi - matrix of size ndof x D holding the derivatives of the basis functions

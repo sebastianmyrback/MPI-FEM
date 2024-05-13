@@ -123,26 +123,31 @@ struct Mesh {
 
 protected:
 
-    size_t nverts, ncells, nbe;            // number of vertices, quadrilaterals and border elements in the mesh
+    size_t nverts, ncells, nbe, nsubdomains;    // number of vertices, quadrilaterals and border elements in the mesh
     double h;                                   // typical mesh size
 
     std::vector<Cell<d>> cells;                 // list of cells in the mesh
     std::vector<Vertex<d>> vertices;            // list of vertices in the mesh
-    std::vector<size_t> cell_to_vertex;    // map index from cell to vertex
+    std::vector<size_t> cell_to_vertex;         // map index from cell to vertex
 
 public:
 
+    constexpr static size_t dim = d;            // dimension of the mesh
+
     virtual void refine_mesh() = 0; 
     virtual void partition(const size_t n_mpi_processes) = 0;               // partition the mesh for parallelization   
+    virtual const std::vector<std::vector<size_t>> get_distribution() = 0;  // get the distribution of the mesh for parallelization
 
-    const size_t get_nverts() const noexcept {return nverts;}
-    const size_t get_ncells() const noexcept {return ncells;}
-    const size_t get_nbe() const noexcept {return nbe;}
-    const size_t get_dim() const noexcept {return d;}
-    const double get_h() const noexcept {return h;}
+    const size_t &get_nverts() const noexcept {return nverts;}
+    const size_t &get_ncells() const noexcept {return ncells;}
+    const size_t &get_nbe() const noexcept {return nbe;}
+    const size_t &get_nsubdomains() const noexcept {return nsubdomains;}
+    const double &get_h() const noexcept {return h;}
 
-    const std::vector<Vertex<d>> & get_vertices() const noexcept {return vertices;}
-    const std::vector<size_t>& get_cell_to_vertex() const noexcept {return cell_to_vertex;}
+    virtual void mesh_info(const bool detailed = false) = 0;
+
+    const std::vector<Vertex<d>> &get_vertices() const noexcept {return vertices;}
+    const std::vector<size_t> &get_cell_to_vertex() const noexcept {return cell_to_vertex;}
 
 
     // Iterators for iterating over the cells in the mesh
@@ -176,6 +181,9 @@ struct Mesh1D : public Mesh<1> {
     void refine_mesh() override;
     void partition(const size_t n_mpi_processes) override;
 
+    void mesh_info(const bool detailed = false) override;
+
+    const std::vector<std::vector<size_t>> get_distribution() override;  
 };
 
 
