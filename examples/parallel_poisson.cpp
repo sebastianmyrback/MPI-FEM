@@ -202,16 +202,6 @@ namespace parallel_poisson
 
         my_global_dofs = dof_distribution[this_mpi_process];
 
-        // for (int i = 0; i < loc2glb.size(); i++)
-        //     std::cout << loc2glb[i] << " ";
-        // std::cout << std::endl;
-
-        for (const auto & dof : my_global_dofs)
-            std::cout << dof << " ";
-        std::cout << std::endl;
-
-        getchar();
-
         system_rhs.assign(my_global_dofs.size(), 0.0);
         solution.assign(my_global_dofs.size(), 0.0);
         system_matrix.clear();
