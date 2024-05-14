@@ -24,10 +24,10 @@ public:
     
     BasisFunction() {ndof = 0;}
 
-    virtual void eval(const Rn &x, Vector &phi) const {assert(false);};
+    virtual void eval(const Rn &x, std::vector<double> &phi) const {assert(false);};
 
     // dphi is a matrix of size ndof x D
-    virtual void eval_d(const FE &K, const Rn &x, DenseMatrix &dphi) const {assert(false);};
+    virtual void eval_d(const FE &K, const Rn &x, std::vector<std::vector<double>> &dphi) const {assert(false);};
 
     ~BasisFunction() {}
 
@@ -44,10 +44,10 @@ public:
     
     P1Lagrange1D() : BasisFunction<1, degree>() {this->ndof = degree + 1;}
 
-    void eval(const Rn &x, Vector &phi) const override;
+    void eval(const Rn &x, std::vector<double> &phi) const override;
 
     // dphi is a matrix of size ndof x D
-    void eval_d(const FE &K, const Rn &x, DenseMatrix &dphi) const override;
+    void eval_d(const FE &K, const Rn &x, std::vector<std::vector<double>> &dphi) const override;
 
     ~P1Lagrange1D() {}
 

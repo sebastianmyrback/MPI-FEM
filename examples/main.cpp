@@ -36,7 +36,7 @@ int main() {
     //const double a = 0., b = 1.;
     
     std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.), mesh_sizes(n_refinements, 0.), mesh_sizes_sq(n_refinements, 0.);
-    Vector mesh_vertices, uh, uexact, diff;
+    data_structures::serial::Vector mesh_vertices, uh, uexact, diff;
 
     for (int i = 0; i < n_refinements; i++) {
 
@@ -70,7 +70,7 @@ int main() {
         const double tol = 1e-10;
         const int max_iter = 1000;
 
-        const int cg_iterations = solve::cg(prob.mat, prob.rhs, uh, max_iter, tol);
+        const int cg_iterations = solve::serial::cg(prob.mat, prob.rhs, uh, max_iter, tol);
 
         diff = uexact - uh;
 

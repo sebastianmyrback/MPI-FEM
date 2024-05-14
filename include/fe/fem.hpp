@@ -8,7 +8,7 @@
 #include "../utilities/utils.hpp"
 
 
-
+using namespace data_structures::serial;
 
 template <typename mesh>
 class FEM {

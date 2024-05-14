@@ -46,11 +46,11 @@ namespace parallel_poisson
 
         void compute_stiffness_on_cell(
             const typename Mesh1D::cell_iterator &cell, 
-            DenseMatrix &Ak);
+            data_structures::serial::DenseMatrix &Ak);
 
         void compute_rhs_on_cell(
             const typename Mesh1D::cell_iterator &cell, 
-            Vector &fk);
+            data_structures::serial::Vector &fk);
 
         void get_boundary_data(
             const typename Mesh1D::cell_iterator &cell, 
@@ -66,9 +66,9 @@ namespace parallel_poisson
 
         std::vector<size_t> my_global_dofs;
 
-        SparseMatrix system_matrix;
-        Vector       system_rhs;
-        Vector       solution;
+        data_structures::parallel::SparseMatrix system_matrix;
+        data_structures::parallel::Vector       system_rhs;
+        data_structures::parallel::Vector       solution;
 
         
     };
@@ -113,13 +113,13 @@ namespace parallel_poisson
 
     void Poisson1D::compute_stiffness_on_cell(
         const typename Mesh1D::cell_iterator &cell,
-        DenseMatrix &Ak) 
+        data_structures::serial::DenseMatrix &Ak) 
     {
 
         Ak.reinit(0.);
 
         // Holder for evaluations of the gradient of psi
-        DenseMatrix dpsi_vals(dofs_per_cell, dim);
+        data_structures::serial::DenseMatrix dpsi_vals(dofs_per_cell, dim);
         
         const double measure = cell->get_measure();
 
@@ -231,25 +231,22 @@ namespace parallel_poisson
             throw std::runtime_error("Matrix is not empty");
 
         
-        DenseMatrix Ak(dofs_per_cell, dofs_per_cell);    
-        Vector fk(dofs_per_cell);
+        data_structures::serial::DenseMatrix Ak(dofs_per_cell, dofs_per_cell);    
+        data_structures::serial::Vector fk(dofs_per_cell);
         std::map<int, double> boundary_data;
 
         // Loop over all cells in the mesh
         for (auto cell = mesh.cell_begin(); cell != mesh.cell_end(); ++cell) 
-            if (cell->get_subdomain() == this_mpi_process) {
-
+            if (cell->get_subdomain() == this_mpi_process) 
+            {
                 std::vector<size_t> loc2glb(dofs_per_cell);
                 for (size_t i = 0; i < dofs_per_cell; ++i) 
                     loc2glb[i] = cell->vertex(i).global_index();
 
                 compute_stiffness_on_cell(cell, Ak);      
-                
                 compute_rhs_on_cell(cell, fk);
-                
-                get_boundary_data(cell, loc2glb, boundary_data);
-                
-                utilities::distribute_local_to_global(
+                get_boundary_data(cell, loc2glb, boundary_data);    
+                utilities::parallel_dofs::distribute_local_to_global(
                     Ak, 
                     fk,
                     system_matrix, 
@@ -257,7 +254,7 @@ namespace parallel_poisson
                     loc2glb,
                     boundary_data);
 
-        }
+            }
 
     }
 
@@ -265,7 +262,7 @@ namespace parallel_poisson
     {
         const size_t max_iter = 1000;
         const double tol = 1e-10;
-        return solve::cg(system_matrix, system_rhs, solution, max_iter, tol);    
+        return solve::parallel::cg(system_matrix, system_rhs, solution, max_iter, tol);    
     }
 
     void Poisson1D::run()

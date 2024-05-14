@@ -5,7 +5,7 @@ void FEM<mesh>::compute_stiffness_on_cell(
     const std::vector<int> &loc2glb,
     const quadrature::QuadratureRule<dim> &qr,
     const BasisFunction<dim, degree> &psi,
-    DenseMatrix &Ak) 
+    data_structures::serial::DenseMatrix &Ak) 
 {
 
     const int n_quad_pts = qr.n;
@@ -14,7 +14,8 @@ void FEM<mesh>::compute_stiffness_on_cell(
     Ak.reinit(0.);
 
     // Holder for evaluations of the gradient of psi
-    DenseMatrix dpsi_vals(dofs_per_cell, dim);
+    //std::vector<double> dpsi_vals(dofs_per_cell, dim);
+    std::vector<std::vector<double>> dpsi_vals(dofs_per_cell, std::vector<double>(dim, 0.));
 
     const double measure = cell->get_measure();
 
@@ -32,7 +33,7 @@ void FEM<mesh>::compute_stiffness_on_cell(
 
                 for (int dm = 0; dm < dim; dm++)     // loop over space dimensions
                 { 
-                    Ak(i, j) += qr[ipq].weight * measure * dpsi_vals(i, dm) * dpsi_vals(j, dm);
+                    Ak(i, j) += qr[ipq].weight * measure * dpsi_vals[i][dm] * dpsi_vals[j][dm];
                 }       
             }
         }
@@ -48,7 +49,7 @@ void FEM<mesh>::compute_rhs_on_cell(
     const quadrature::QuadratureRule<dim> &qr,
     const BasisFunction<dim, degree> &psi,
     const double f(const Point<dim> &),
-    Vector &fk)
+    data_structures::serial::Vector &fk)
 {
 
     const int n_quad_pts = qr.n;
@@ -56,7 +57,7 @@ void FEM<mesh>::compute_rhs_on_cell(
 
     fk.reinit(0.0);
 
-    Vector psi_vals(dofs_per_cell);    // container for evaluations of psi
+    std::vector<double> psi_vals(dofs_per_cell);    // container for evaluations of psi
 
     // Get the measure of the element
     const double measure = cell->get_measure();
@@ -108,8 +109,8 @@ template<typename mesh>
 void FEM<mesh>::distribute_local_to_global(
     const typename mesh::cell_iterator &cell,
     const std::vector<int> &loc2glb,
-    DenseMatrix &Ak,
-    Vector &fk,
+    data_structures::serial::DenseMatrix &Ak,
+    data_structures::serial::Vector &fk,
     const std::map<int, double> &boundary_data)
 {
 
@@ -192,8 +193,8 @@ void FEM<mesh>::assemble_stiffness_system(
     
     const int dofs_per_cell = psi.ndof;
 
-    DenseMatrix Ak(dofs_per_cell, dofs_per_cell);    
-    Vector fk(dofs_per_cell);
+    data_structures::serial::DenseMatrix Ak(dofs_per_cell, dofs_per_cell);    
+    data_structures::serial::Vector fk(dofs_per_cell);
 
     // Loop over all cells in the mesh
     for (auto cell = Th->cell_begin(); cell != Th->cell_end(); ++cell) 

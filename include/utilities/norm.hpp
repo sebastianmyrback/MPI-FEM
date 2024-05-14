@@ -13,8 +13,8 @@ static double L2H1norm(const mesh &Th, const quadrature::QuadratureRule<dim> &qr
     const int n_quad_pts = qr.n;
 
     const int ndofs = psi.ndof;             // number of dofs per element
-    Vector psi_vals(ndofs);    // container for evaluations of psi
-    DenseMatrix dpsi_vals(ndofs, dim);    // ndofs x dim matrix
+    std::vector<double> psi_vals(ndofs);    // container for evaluations of psi
+    std::vector<std::vector<double>> dpsi_vals(ndofs, std::vector<double>(dim, 0.));
 
 
     // Loop over all elements
