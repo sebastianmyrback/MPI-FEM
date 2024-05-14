@@ -68,7 +68,8 @@ namespace parallel_poisson
 
         data_structures::parallel::SparseMatrix system_matrix;
         data_structures::parallel::Vector       system_rhs;
-        data_structures::parallel::Vector       solution;
+        //data_structures::parallel::Vector       solution;
+        std::vector<double>                     solution;
 
         
     };
@@ -79,7 +80,7 @@ namespace parallel_poisson
         // n_mpi_processes(MPI::n_mpi_processes(mpi_communicator)),
         // this_mpi_process(MPI::this_mpi_process(mpi_communicator)),
         n_mpi_processes(3),
-        this_mpi_process(0),
+        this_mpi_process(1),
         mesh(0, 1., 10),
         psi(),
         qr(quadrature::midpoint),
@@ -202,10 +203,16 @@ namespace parallel_poisson
 
         my_global_dofs = dof_distribution[this_mpi_process];
 
-        system_rhs.assign(my_global_dofs.size(), 0.0);
+        //system_rhs.assign(my_global_dofs.size(), 0.0);
         solution.assign(my_global_dofs.size(), 0.0);
+        system_rhs.clear();
         system_matrix.clear();
 
+        for (const auto &my_dof : my_global_dofs)
+        {
+            system_rhs.insert({my_dof, 0.0});
+            solution.push_back(0.0);
+        }
         
         
         // const std::size_t n_dofs = mesh.n_cells() + 1;
@@ -252,13 +259,17 @@ namespace parallel_poisson
     {
         const size_t max_iter = 1000;
         const double tol = 1e-10;
-        return solve::parallel::cg(system_matrix, system_rhs, solution, max_iter, tol);    
+        //return solve::parallel::cg(system_matrix, system_rhs, solution, max_iter, tol);    
+        return 10;
     }
 
     void Poisson1D::run()
     {
         setup_system();
         assemble_system();
+
+        system_rhs.print();
+        
     }
 
 

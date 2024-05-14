@@ -100,7 +100,7 @@ namespace utilities
             {
 
                 // Add local rhs vector to global rhs vector
-                system_rhs(loc2glb[i]) += fk[i];
+                system_rhs.at(loc2glb[i]) += fk[i];
 
                 
                 // Check if dof i is a Dirichlet dof
@@ -126,7 +126,7 @@ namespace utilities
                         // Subtract dirichlet column of A times boundary value from rhs
                         if (is_col_dof_dirichlet) 
                         {
-                            system_rhs(loc2glb[i]) -= Ak(i, j) * boundary_data.at(loc2glb[j]);
+                            system_rhs.at(loc2glb[i]) -= Ak(i, j) * boundary_data.at(loc2glb[j]);
                         }
 
                         // Set local row and column to zero
@@ -137,7 +137,7 @@ namespace utilities
                         if (i == j) 
                         {
                             Ak(i, j) = avg_diag;
-                            system_rhs(loc2glb[i]) = avg_diag * boundary_data.at(loc2glb[j]);
+                            system_rhs.at(loc2glb[i]) = avg_diag * boundary_data.at(loc2glb[j]);
                         }
                     }
 

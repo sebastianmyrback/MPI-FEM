@@ -120,7 +120,8 @@ namespace solve
             //std::vector<double> x(u0);  // x0 = 0
             data_structures::parallel::Vector r = b;      // r0 = b - Ax0 = b
             data_structures::parallel::Vector p = r;      // p0 = r0
-            data_structures::parallel::Vector Ap(n, 0.0);
+            //data_structures::parallel::Vector Ap(n, 0.0);
+            std::vector<double> Ap;
             double alpha = 0., beta = 0., r_dot_r = 0., r_dot_r_new = 0., p_dot_Ap = 0.;
 
             for (int iter = 0; iter < max_iter; iter++) {

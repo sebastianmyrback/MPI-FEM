@@ -456,7 +456,7 @@ namespace data_structures
         };
 
 
-        class Vector : public std::vector<double> 
+        class Vector : public std::map<int, double> 
         {
 
         public:
@@ -467,183 +467,17 @@ namespace data_structures
             //     this->assign(n, 0.);
             // }
 
-            Vector(int n) {
-                this->assign(n, 0.);
-            }
+            Vector(const Vector &v) : std::map<int, double>(v) {} 
 
+            Vector(Vector &&v) : std::map<int, double>(std::move(v)) {}
 
-            Vector(int n, const double s) {
-                this->assign(n, s);
-            }
-
-            Vector(const Vector &v) : std::vector<double>(v) {} 
-
-            Vector(Vector &&v) : std::vector<double>(std::move(v)) {}
-
-            Vector(const std::vector<double> &v) : std::vector<double>(v) {}
-
-            Vector & operator=(const Vector &v) {
-                std::vector<double>::operator=(v);
-                return *this;
-            }
-
-            Vector & operator=(Vector &&v) {   
-                std::vector<double>::operator=(std::move(v));
-                return *this;
-            }
-
-            double & operator()(int i) {
-                if (i >= (*this).size()) {
-                    std::cerr << "Vector::operator(): index out of bounds" << std::endl;
-                    exit(1);
-                }
-                return (*this)[i];
-            }
-
-            const double & operator()(int i) const {
-                if (i >= (*this).size()) {
-                    std::cerr << "Vector::operator(): index out of bounds" << std::endl;
-                    exit(1);
-                }
-                return (*this)[i];
-            }
-
-            // arithmetic operations
-            Vector operator+(const Vector &v) const {
-                if ((*this).size() != v.size()) {
-                    std::cerr << "Vector::operator+: dimension mismatch" << std::endl;
-                    exit(1);
-                }
-                Vector res(v.size());
-                for (int i = 0; i < v.size(); i++) {
-                    res(i) = (*this)[i] + v(i);
-                }
-                return res;
-            }
-
-            Vector operator-(const Vector &v) const {
-                if ((*this).size() != v.size()) {
-                    std::cerr << "Vector::operator-: dimension mismatch" << std::endl;
-                    exit(1);
-                }
-                Vector res(v.size());
-                for (int i = 0; i < v.size(); i++) {
-                    res(i) = (*this)[i] - v(i);
-                }
-                return res;
-            }
-
-            Vector operator*(double scalar) const {
-                Vector res((*this).size());
-                for (int i = 0; i < (*this).size(); i++) {
-                    res(i) = (*this)[i] * scalar;
-                }
-                return res;
-            }
-
-            Vector operator/(double scalar) const {
-                Vector res((*this).size());
-                for (int i = 0; i < (*this).size(); i++) {
-                    res(i) = (*this)[i] / scalar;
-                }
-                return res;
-            }
-
-            Vector operator+=(const Vector &v) {
-                if ((*this).size() != v.size()) {
-                    std::cerr << "Vector::operator+=: dimension mismatch" << std::endl;
-                    exit(1);
-                }
-                for (int i = 0; i < v.size(); i++) {
-                    (*this)[i] += v(i);
-                }
-                return *this;
-            }
-
-            Vector operator-=(const Vector &v) {
-                if ((*this).size() != v.size()) {
-                    std::cerr << "Vector::operator-=: dimension mismatch" << std::endl;
-                    exit(1);
-                }
-                for (int i = 0; i < v.size(); i++) {
-                    (*this)[i] -= v(i);
-                }
-                return *this;
-            }
-
-            // void init(const size_t n, const double val)
-            // {
-            //     this->assign(n, val);
-            // }
-
-            void reinit(double val) {
-                std::fill((*this).begin(), (*this).end(), val);
-            }
-
-            // dot product
-            double dot(const Vector &v) const {
-                double res = 0;
-                for (int i = 0; i < (*this).size(); i++) {
-                    res += (*this)[i] * v(i);
-                }
-                return res;
-            }
-
-            // Matrix-Vector product
-            Vector matvec(const DenseMatrix &A) const {
-                
-                if ((*this).size() != A.cols()) {
-                    std::cerr << "Vector::matvec: dimension mismatch" << std::endl;
-                    exit(1);
-                }
-                Vector res(A.cols());
-
-                for (int i = 0; i < A.cols(); i++) {
-                    for (int j = 0; j < (*this).size(); j++) {
-                        res(i) += A(j, i) * (*this)[j];
-                    }
-                }
-                return res;
-            }
-
-            Vector matvec(const SparseMatrix &A) const 
-            {
-                // if ((*this).size() != A.size()) {
-                //     std::cerr << "Vector::matvec: dimension mismatch" << std::endl;
-                //     exit(1);
-                // }
-
-                Vector res((*this).size());
-                for (auto & [indices, value] : A) {
-                    int row = indices.first;
-                    int col = indices.second;
-
-                    res.at(row) += value * (*this)[col];
-                }
-
-                return res;
-            }
-
-            friend Vector operator*(double scalar, const Vector &v) 
-            {
-                return v * scalar;
-            }
-
-
-            friend Vector operator*(const class DenseMatrix &A, const Vector &v) 
-            {
-                return v.matvec(A);
-            }
-
-            friend Vector operator*(const class SparseMatrix &A, const Vector &v) 
-            {
-                return v.matvec(A);
-            }
 
             void print() const {
+            
+                for (const auto & [glb_index, value] : (*this)) {
+        
+                    std::cout << glb_index << " = " << value << std::endl;
 
-                for (int i = 0; i < (*this).size(); i++) {
-                    std::cout << (*this)(i) << std::endl;
                 }
             }
 
