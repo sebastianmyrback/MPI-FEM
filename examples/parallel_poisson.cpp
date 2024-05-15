@@ -8,6 +8,7 @@
 #include "fe/fem.hpp"
 #include "solve/cg.hpp"
 
+#include <set>
 #include <chrono>
 
 
@@ -65,6 +66,7 @@ namespace parallel_poisson
         void output_results() const;
 
         std::vector<size_t> my_global_dofs;
+        std::map<int, std::set<int>> shared_dofs;
 
         data_structures::parallel::SparseMatrix system_matrix;
         data_structures::parallel::Vector       system_rhs;
@@ -80,7 +82,7 @@ namespace parallel_poisson
         // n_mpi_processes(MPI::n_mpi_processes(mpi_communicator)),
         // this_mpi_process(MPI::this_mpi_process(mpi_communicator)),
         n_mpi_processes(3),
-        this_mpi_process(1),
+        this_mpi_process(0),
         mesh(0, 1., 10),
         psi(),
         qr(quadrature::midpoint),
@@ -196,12 +198,37 @@ namespace parallel_poisson
 
     void Poisson1D::setup_system()
     {
-        mesh.partition(n_mpi_processes);
+        mesh.partition(n_mpi_processes);    // split cells over processes
+        mesh.distribute_dofs();             // distribute dofs over processes and mark shared dofs
 
-        const std::vector<std::vector<size_t>> dof_distribution
-        = mesh.get_distribution();  // index_distribution[p][i] = global index of local dof i on process p
-
+        const std::vector<std::vector<size_t>> dof_distribution = mesh.get_distribution();
         my_global_dofs = dof_distribution[this_mpi_process];
+        shared_dofs    = mesh.get_shared_dofs();
+
+        
+
+        
+
+        // // print out map
+        // for (const auto &pair : shared_dofs) 
+        // {
+        //     std::cout << pair.first << ": ";
+        //     for (const auto &s : pair.second) 
+        //     {
+        //         std::cout << s << " ";
+        //     }
+        //     std::cout << std::endl;
+        // }
+
+        // getchar();
+
+        // for (auto cell = mesh.cell_begin(); cell != mesh.cell_end(); ++cell) {
+        //     int subdomain = cell->get_subdomain();
+        //     for (size_t i = 0; i < dofs_per_cell; ++i) {
+        //         int dof = cell->vertex(i).global_index();
+        //         shared_dofs[dof].insert(subdomain);
+        //     }
+        // }
 
         //system_rhs.assign(my_global_dofs.size(), 0.0);
         solution.assign(my_global_dofs.size(), 0.0);
@@ -267,6 +294,7 @@ namespace parallel_poisson
     {
         setup_system();
         assemble_system();
+
 
         system_rhs.print();
         

@@ -151,6 +151,11 @@ void Mesh1D::partition(const size_t n_mpi_processes) {
     
     size_t process = 0;
     size_t cells_for_this_process = 0;
+
+    dof_distribution.resize(nsubdomains);
+    shared_dofs.clear();
+
+    //for (auto cell = this->cell_begin(); cell != this->cell_end(); ++cell)
     for (int i = 0; i < ncells; ++i) 
     {
         cells[i].set_subdomain(process);
@@ -160,6 +165,18 @@ void Mesh1D::partition(const size_t n_mpi_processes) {
             ++process;
             cells_for_this_process = 0;
         }
+
+        // for (int n = 0; n < cells[i].n_verts_per_cell; n++) {
+        //     const size_t glb_idx = cell_to_vertex[cells[i].n_verts_per_cell*cells[i].get_index() + n];
+
+        //     // add glb_idx to correct subdomain list if it's not already there
+        //     if (std::find(dof_distribution[cells[i].get_subdomain()].begin(), dof_distribution[cells[i].get_subdomain()].end(), glb_idx) == dof_distribution[cells[i].get_subdomain()].end())
+        //         dof_distribution[cells[i].get_subdomain()].push_back(glb_idx);
+            
+        //     shared_dofs[glb_idx].insert(process);
+        // }
+
+
     }
 
     nsubdomains = n_mpi_processes;
@@ -168,25 +185,68 @@ void Mesh1D::partition(const size_t n_mpi_processes) {
 }
 
 
-const std::vector<std::vector<size_t>> Mesh1D::get_distribution() {
+void Mesh1D::distribute_dofs()
+{
+    dof_distribution.resize(nsubdomains);
+    shared_dofs.clear();
 
-    // Return a vector of vectors containing the global indices
-    // of the local dofs on each process
+    //for (auto cell = this->cell_begin(); cell != this->cell_end(); ++cell)
+    for (int i = 0; i < ncells; ++i) 
+    {
+        int subdomain = cells[i].get_subdomain();
 
-    std::vector<std::vector<size_t>> dof_distribution(nsubdomains);
-
-    for (auto cell = this->cell_begin(); cell != this->cell_end(); ++cell) {
-
-        for (int n = 0; n < cell->n_verts_per_cell; n++) {
-            const size_t glb_idx = cell_to_vertex[cell->n_verts_per_cell*cell->get_index() + n];
+        for (int n = 0; n < cells[i].n_verts_per_cell; n++) {
+            const size_t glb_idx = cell_to_vertex[cells[i].n_verts_per_cell*cells[i].get_index() + n];
 
             // add glb_idx to correct subdomain list if it's not already there
-            if (std::find(dof_distribution[cell->get_subdomain()].begin(), dof_distribution[cell->get_subdomain()].end(), glb_idx) == dof_distribution[cell->get_subdomain()].end())
-                dof_distribution[cell->get_subdomain()].push_back(glb_idx);
+            if (std::find(dof_distribution[cells[i].get_subdomain()].begin(), dof_distribution[cells[i].get_subdomain()].end(), glb_idx) == dof_distribution[cells[i].get_subdomain()].end())
+                dof_distribution[cells[i].get_subdomain()].push_back(glb_idx);
             
+            shared_dofs[glb_idx].insert(subdomain);
         }
+
     }
 
-    return dof_distribution;
-
 }
+
+// const std::vector<std::vector<size_t>> &Mesh1D::get_distribution() {
+
+//     // Return a vector of vectors containing the global indices
+//     // of the local dofs on each process
+
+//     std::vector<std::vector<size_t>> dof_distribution(nsubdomains);
+
+//     for (auto cell = this->cell_begin(); cell != this->cell_end(); ++cell) {
+
+//         for (int n = 0; n < cell->n_verts_per_cell; n++) {
+//             const size_t glb_idx = cell_to_vertex[cell->n_verts_per_cell*cell->get_index() + n];
+
+//             // add glb_idx to correct subdomain list if it's not already there
+//             if (std::find(dof_distribution[cell->get_subdomain()].begin(), dof_distribution[cell->get_subdomain()].end(), glb_idx) == dof_distribution[cell->get_subdomain()].end())
+//                 dof_distribution[cell->get_subdomain()].push_back(glb_idx);
+            
+//         }
+//     }
+
+//     return dof_distribution;
+
+// }
+
+
+// const std::map<int, std::set<int>> &get_shared_dofs() {
+
+//     // Return a map of shared dofs for parallelization
+
+//     std::map<int, std::set<int>> shared_dofs;
+
+//     for (auto cell = this->cell_begin(); cell != this->cell_end(); ++cell) {
+//         int subdomain = cell->get_subdomain();
+//         for (size_t i = 0; i < dofs_per_cell; ++i) {
+//             int dof = cell->vertex(i).global_index();
+//             shared_dofs[dof].insert(subdomain);
+//         }
+//     }
+
+//     return shared_dofs;
+
+// }

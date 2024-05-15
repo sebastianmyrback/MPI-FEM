@@ -29,11 +29,11 @@ int main() {
     auto start = std::chrono::high_resolution_clock::now();
 
     // Create a mesh object
-    const int n_refinements = 7;
+    const int n_refinements = 1;
     int n = 10;     // number of elements
     const int n_threads = 1;
-    const double a = -0.63, b = 5.27;
-    //const double a = 0., b = 1.;
+    //const double a = -0.63, b = 5.27;
+    const double a = 0., b = 1.;
     
     std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.), mesh_sizes(n_refinements, 0.), mesh_sizes_sq(n_refinements, 0.);
     data_structures::serial::Vector mesh_vertices, uh, uexact, diff;

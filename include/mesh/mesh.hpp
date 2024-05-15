@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <array>
+#include <set>
+#include <map>
 #include <iostream>
 #include <algorithm>
 #include <assert.h>
@@ -137,7 +139,6 @@ public:
 
     virtual void refine_mesh() = 0; 
     virtual void partition(const size_t n_mpi_processes) = 0;               // partition the mesh for parallelization   
-    virtual const std::vector<std::vector<size_t>> get_distribution() = 0;  // get the distribution of the mesh for parallelization
 
     const size_t &get_nverts() const noexcept {return nverts;}
     const size_t &get_ncells() const noexcept {return ncells;}
@@ -181,10 +182,20 @@ struct Mesh1D : public Mesh<1> {
     Mesh1D(const double a, const double b, const int n);
     void refine_mesh() override;
     void partition(const size_t n_mpi_processes) override;
+    void distribute_dofs();
+    
+    // const std::vector<std::vector<size_t>> &get_distribution() override;  
+    // const std::map<int, std::set<int>> &get_shared_dofs() override;
+
+    const std::vector<std::vector<size_t>> &get_distribution() {return dof_distribution;}
+    const std::map<int, std::set<int>> &get_shared_dofs() {return shared_dofs;}
 
     void mesh_info(const bool detailed = false) override;
 
-    const std::vector<std::vector<size_t>> get_distribution() override;  
+private:
+    std::vector<std::vector<size_t>> dof_distribution;
+    std::map<int, std::set<int>> shared_dofs;
+    
 };
 
 
