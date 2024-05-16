@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include "mpi.h"
 
 namespace mpi_util

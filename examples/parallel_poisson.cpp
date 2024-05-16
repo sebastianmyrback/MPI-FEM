@@ -372,6 +372,34 @@ namespace parallel_poisson
         {
             if (dof.second.size() > 1)
             {
+                
+                // if (this_mpi_process == 3)
+                // {
+
+                //     for (const auto g : my_global_dofs)
+                //         std::cout << "Global dof: " << g << " ";
+                //     std::cout << std::endl;
+
+
+                //     std::set<int> rows_to_send;
+                //     for (const auto &entry : system_matrix) {
+
+                //         int row = entry.first.first;
+                //         std::cout << "Row: " << row << " ";
+                //         if (row < my_global_dofs.front()) {
+                //             rows_to_send.insert(row);
+                //         }
+                //     }
+                //     std::cout << std::endl;
+                
+                //     std::cout << "Rows to send: ";
+                //     for (const auto &r : rows_to_send) {
+                //         std::cout << r << " ";
+                //     }
+                //     std::cout << std::endl;
+                // }
+                // getchar();
+
                 std::vector<double> send_buffer_rhs, send_buffer_matrix, receive_buffer_rhs, receive_buffer_matrix;
 
                 const bool i_share_this_dof = dof.second.find(this_mpi_process) != dof.second.end();
@@ -379,10 +407,23 @@ namespace parallel_poisson
                 if (!i_share_this_dof)
                     continue;
                 
+
+
                 send_buffer_rhs.push_back(dof.first);
                 send_buffer_rhs.push_back(system_rhs.at(dof.first));
-                send_buffer_matrix.push_back(dof.first);
+                // // traverse the matrix and send the entries on row dof.first
+                // for (const auto &entry : system_matrix) {
+                //     if (entry.first.first == dof.first) {
+                //         send_buffer_matrix.push_back(entry.first.second);
+                //         send_buffer_matrix.push_back(entry.second);
+                //     }
+                // }
+
+                // send row of shared dof
+                //send_buffer_matrix.push_back(dof.first);
+                // send all entries in the row
                 send_buffer_matrix.push_back(system_matrix.at({dof.first, dof.first}));
+                send_buffer_matrix.push_back(system_matrix.at({dof.first, dof.first + 1 - 2 * (dof.first > my_global_dofs[0])}));    // send the off-diagonal entry 
 
                 receive_buffer_rhs.resize(send_buffer_rhs.size());
                 receive_buffer_matrix.resize(send_buffer_matrix.size());
@@ -418,20 +459,26 @@ namespace parallel_poisson
                 {
                     int dof = (int)receive_buffer_rhs[i];
                     double rhs_value = receive_buffer_rhs[i + 1];
-                    int dof_matrix = (int)receive_buffer_matrix[i];
-                    double matrix_value = receive_buffer_matrix[i + 1];
+                    //int dof_matrix = (int)receive_buffer_matrix[i]; // row dof
+                    //double matrix_value = receive_buffer_matrix[i + 1];
+                    double matrix_value = receive_buffer_matrix[i];
+                    double matrix_value_next = receive_buffer_matrix[i + 1];
                     
                     if (is_red)
                     {
                         system_rhs.at(dof) += rhs_value;
-                        system_matrix.add(dof_matrix, dof_matrix, matrix_value);
+                        system_matrix.add(dof, dof, matrix_value);
+                        system_matrix.add(dof, dof + 1 - 2 * (dof <= my_global_dofs[0]), matrix_value_next);
+                        //solution.resize(solution.size());
                     }
                     else
                     {
                         system_rhs.erase(dof);
-                        system_matrix.erase({dof_matrix, dof_matrix});
+                        system_matrix.erase({dof, dof});
+                        //std::cout << "Erasing dofs: " << dof << " and " << next_dof << " on process " << this_mpi_process << std::endl;
+                        system_matrix.erase({dof, dof + 1 - 2 * (dof > my_global_dofs[0])});
                         //solution.erase(solution.end()); // resize the solution vector
-                        solution.resize(solution.size() - 1);
+                        //solution.resize(solution.size() - 2);
                     }
 
                 } 
@@ -447,26 +494,58 @@ namespace parallel_poisson
     {
         const size_t max_iter = 1000;
         const double tol = 1e-10;
-        return solve::parallel::cg(system_matrix, system_rhs, solution, max_iter, tol);    
+        return solve::parallel::cg(system_matrix, system_rhs, solution, max_iter, tol, mpi_communicator);    
     }
 
     void Poisson1D::run()
     {
         setup_system();
         assemble_system();
+
+        // if (this_mpi_process == 0)
+        // {
+        //     std::cout << "before exchange on process " << this_mpi_process << "\n";
+        //     system_matrix.print();
+
+        //     system_rhs.print();
+        // }
+
+        // if (this_mpi_process == 2)
+        // {
+        //     std::cout << "before exchange on process " << this_mpi_process << "\n";
+        //     system_matrix.print();
+
+        //     system_rhs.print();
+        // }
         exchange_shared();      // exchange shared dofs between processes
 
+        // if (this_mpi_process == 0)
+        // {
+        //     std::cout << "after exchange on process " << this_mpi_process << "\n";
+        //     system_matrix.print();
+
+        //     system_rhs.print();
+        // }
+        // if (this_mpi_process == 2)
+        // {
+        //     std::cout << "after exchange on process " << this_mpi_process << "\n";
+        //     system_matrix.print();
+
+        //     system_rhs.print();
+        // }
 
         const size_t cg_iterations = solve();
         std::cout << "CG iterations: " << cg_iterations << std::endl;
 
-        if (this_mpi_process == 0)
-        {
-            for (const auto &s : solution)
-                std::cout << s << " ";
-            std::cout << std::endl;
+        // if (this_mpi_process == 0)
+        // {
+        //     for (const auto &s : solution)
+        //         std::cout << s << " ";
+        //     std::cout << std::endl;
             
-        }
+        // }
+
+
 
         // int local_size = my_global_dofs.size();
 
