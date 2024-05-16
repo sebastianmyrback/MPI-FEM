@@ -9,6 +9,7 @@ Mesh1D::Mesh1D(
     nverts = n + 1;
     ncells = n;
     nbe = 2;
+    nsubdomains = 1;
 
     constexpr int n_verts_per_cell = 2;
 
@@ -152,10 +153,6 @@ void Mesh1D::partition(const size_t n_mpi_processes) {
     size_t process = 0;
     size_t cells_for_this_process = 0;
 
-    dof_distribution.resize(nsubdomains);
-    shared_dofs.clear();
-
-    //for (auto cell = this->cell_begin(); cell != this->cell_end(); ++cell)
     for (int i = 0; i < ncells; ++i) 
     {
         cells[i].set_subdomain(process);
@@ -165,18 +162,6 @@ void Mesh1D::partition(const size_t n_mpi_processes) {
             ++process;
             cells_for_this_process = 0;
         }
-
-        // for (int n = 0; n < cells[i].n_verts_per_cell; n++) {
-        //     const size_t glb_idx = cell_to_vertex[cells[i].n_verts_per_cell*cells[i].get_index() + n];
-
-        //     // add glb_idx to correct subdomain list if it's not already there
-        //     if (std::find(dof_distribution[cells[i].get_subdomain()].begin(), dof_distribution[cells[i].get_subdomain()].end(), glb_idx) == dof_distribution[cells[i].get_subdomain()].end())
-        //         dof_distribution[cells[i].get_subdomain()].push_back(glb_idx);
-            
-        //     shared_dofs[glb_idx].insert(process);
-        // }
-
-
     }
 
     nsubdomains = n_mpi_processes;

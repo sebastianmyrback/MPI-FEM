@@ -4,11 +4,23 @@ project(TensorFEM)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Python3 COMPONENTS Interpreter Development NumPy)
-include_directories(${Python3_INCLUDE_DIRS} include)
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${LDFLAGS} -std=c++17 -fPIC -O3")
 
+option(USE_MPI "Use MPI" ON)
+option(USE_MATPLOTLIB "Use Matplotlib" OFF)
+
+if (USE_MPI)
+    find_package(MPI REQUIRED)
+    set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
+    include_directories(${MPI_CXX_INCLUDE_PATH})
+endif()
+
+if (USE_MATPLOTLIB)
+    find_package(Python3 COMPONENTS Interpreter Development NumPy)
+    include_directories(${Python3_INCLUDE_DIRS})
+endif()
+
+include_directories(include)
 
 # Find all the source files in the directory
 file(GLOB SOURCES "src/*.cpp")

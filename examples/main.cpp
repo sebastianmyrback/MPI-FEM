@@ -3,6 +3,8 @@
 #include "utilities/export.hpp"
 #include "utilities/norm.hpp"
 #include "solve/cg.hpp"
+#include "mpi.h"
+
 #include <chrono>
 
 // #include "matplotlibcpp.h"

@@ -3,10 +3,12 @@
 #include "utilities/export.hpp"
 #include "utilities/norm.hpp"
 #include "utilities/utils.hpp"
+#include "utilities/mpi_util.hpp"
 #include "quadrature/quadrature.hpp"
 #include "mesh/mesh.hpp"
 #include "fe/fem.hpp"
 #include "solve/cg.hpp"
+
 
 #include <set>
 #include <chrono>
@@ -30,7 +32,7 @@ namespace parallel_poisson
         static const double f(const Point<1> &x);
         static const double u(const Point<1> &x);
 
-        //MPI_Comm mpi_communicator;
+        MPI_Comm mpi_communicator;
 
         const std::size_t n_mpi_processes;
         const std::size_t this_mpi_process;
@@ -61,6 +63,7 @@ namespace parallel_poisson
 
         void setup_system();
         void assemble_system();
+        void exchange_shared();
         const size_t solve();
         void compute_errors();
         void output_results() const;
@@ -78,11 +81,9 @@ namespace parallel_poisson
 
     Poisson1D::Poisson1D()
         :
-        // mpi_communicator(MPI_COMM_WORLD),
-        // n_mpi_processes(MPI::n_mpi_processes(mpi_communicator)),
-        // this_mpi_process(MPI::this_mpi_process(mpi_communicator)),
-        n_mpi_processes(3),
-        this_mpi_process(0),
+        mpi_communicator(MPI_COMM_WORLD),
+        n_mpi_processes(mpi_util::n_mpi_processes(mpi_communicator)),
+        this_mpi_process(mpi_util::this_mpi_process(mpi_communicator)),
         mesh(0, 1., 10),
         psi(),
         qr(quadrature::midpoint),
@@ -201,13 +202,12 @@ namespace parallel_poisson
         mesh.partition(n_mpi_processes);    // split cells over processes
         mesh.distribute_dofs();             // distribute dofs over processes and mark shared dofs
 
+
         const std::vector<std::vector<size_t>> dof_distribution = mesh.get_distribution();
         my_global_dofs = dof_distribution[this_mpi_process];
         shared_dofs    = mesh.get_shared_dofs();
 
-        
-
-        
+        // std::cout << "Rank: " << this_mpi_process << " Size: " << n_mpi_processes << "\n";
 
         // // print out map
         // for (const auto &pair : shared_dofs) 
@@ -219,6 +219,8 @@ namespace parallel_poisson
         //     }
         //     std::cout << std::endl;
         // }
+
+        // std::cout << std::endl;
 
         // getchar();
 
@@ -232,13 +234,17 @@ namespace parallel_poisson
 
         //system_rhs.assign(my_global_dofs.size(), 0.0);
         solution.assign(my_global_dofs.size(), 0.0);
+        //solution.clear();
         system_rhs.clear();
         system_matrix.clear();
 
+        // an std::map does not allocate memory sequentially, but I thought maybe 
+        // if I initialize it like this, its placement in memory will be closer (this is probably stupid)
         for (const auto &my_dof : my_global_dofs)
         {
+            //solution.insert({my_dof, 0.0});
             system_rhs.insert({my_dof, 0.0});
-            solution.push_back(0.0);
+            system_matrix.insert(my_dof, my_dof, 0.0);
         }
         
         
@@ -251,8 +257,8 @@ namespace parallel_poisson
     void Poisson1D::assemble_system()
     {
 
-        if (!system_matrix.empty())
-            throw std::runtime_error("Matrix is not empty");
+        // if (!system_matrix.empty())
+        //     throw std::runtime_error("Matrix is not empty");
 
         
         data_structures::serial::DenseMatrix Ak(dofs_per_cell, dofs_per_cell);    
@@ -282,22 +288,215 @@ namespace parallel_poisson
 
     }
 
+    // void Poisson1D::exchange_shared()
+    // {
+
+    //     // Use a red-black coloring scheme to exchange shared dofs between processes
+    //     // note: this algorithm assumes that maximally two processes share one dofs
+
+    //     bool is_red = this_mpi_process % 2 == 0;
+
+    //     for (const auto &dof : shared_dofs)
+    //     {
+    //         if (dof.second.size() > 1)
+    //         {
+    //             std::vector<double> send_buffer_rhs, send_buffer_matrix, receive_buffer_rhs, receive_buffer_matrix;
+
+    //             const bool i_share_this_dof = dof.second.find(this_mpi_process) != dof.second.end();
+                
+    //             if (!i_share_this_dof)
+    //                 continue;
+                
+    //             send_buffer_rhs.push_back(dof.first);
+    //             send_buffer_rhs.push_back(system_rhs.at(dof.first));
+    //             send_buffer_matrix.push_back(dof.first);
+    //             send_buffer_matrix.push_back(system_matrix.at({dof.first, dof.first}));
+
+    //             receive_buffer_rhs.resize(send_buffer_rhs.size());
+    //             receive_buffer_matrix.resize(send_buffer_matrix.size());
+
+    //             int other_process = -1;
+    //             if (this_mpi_process == *dof.second.begin())
+    //                 other_process = *std::prev(dof.second.end());
+    //             else
+    //                 other_process = *dof.second.begin();
+
+    //             if (is_red) {
+
+    //                 assert(other_process % 2 != 0);
+
+    //                 // Red processes send first
+    //                 MPI_Send(send_buffer_rhs.data(), send_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+    //                 MPI_Send(send_buffer_matrix.data(), send_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+    //                 MPI_Recv(receive_buffer_rhs.data(), receive_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+    //                 MPI_Recv(receive_buffer_matrix.data(), receive_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+
+    //             } else {
+    //                 assert(other_process % 2 == 0);
+
+    //                 // Black processes receive first
+    //                 MPI_Recv(receive_buffer_rhs.data(), receive_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+    //                 MPI_Recv(receive_buffer_matrix.data(), receive_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+    //                 MPI_Send(send_buffer_rhs.data(), send_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+    //                 MPI_Send(send_buffer_matrix.data(), send_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+                    
+    //             }
+
+    //             for (size_t i = 0; i < receive_buffer_rhs.size(); i += 2)
+    //             {
+    //                 int dof = (int)receive_buffer_rhs[i];
+    //                 double rhs_value = receive_buffer_rhs[i + 1];
+    //                 int dof_matrix = (int)receive_buffer_matrix[i];
+    //                 double matrix_value = receive_buffer_matrix[i + 1];
+                    
+    //                 system_rhs.at(dof) += rhs_value;
+    //                 system_matrix.add(dof_matrix, dof_matrix, matrix_value);
+    //             } 
+
+    //             if (other_process == -1)
+    //                 throw std::runtime_error("Other process not found");
+
+
+    //         }
+    //     }
+    // }
+
+    void Poisson1D::exchange_shared()
+    {
+        // Use a red-black coloring scheme to exchange shared dofs between processes
+        // note: this algorithm assumes that maximally two processes share one dofs
+
+        bool is_red = this_mpi_process % 2 == 0;
+
+        for (const auto &dof : shared_dofs)
+        {
+            if (dof.second.size() > 1)
+            {
+                std::vector<double> send_buffer_rhs, send_buffer_matrix, receive_buffer_rhs, receive_buffer_matrix;
+
+                const bool i_share_this_dof = dof.second.find(this_mpi_process) != dof.second.end();
+                
+                if (!i_share_this_dof)
+                    continue;
+                
+                send_buffer_rhs.push_back(dof.first);
+                send_buffer_rhs.push_back(system_rhs.at(dof.first));
+                send_buffer_matrix.push_back(dof.first);
+                send_buffer_matrix.push_back(system_matrix.at({dof.first, dof.first}));
+
+                receive_buffer_rhs.resize(send_buffer_rhs.size());
+                receive_buffer_matrix.resize(send_buffer_matrix.size());
+
+                int other_process = -1;
+                if (this_mpi_process == *dof.second.begin())
+                    other_process = *std::prev(dof.second.end());
+                else
+                    other_process = *dof.second.begin();
+
+                if (is_red) {
+
+                    assert(other_process % 2 != 0);
+
+                    // Red processes send first
+                    MPI_Send(send_buffer_rhs.data(), send_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+                    MPI_Send(send_buffer_matrix.data(), send_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+                    MPI_Recv(receive_buffer_rhs.data(), receive_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+                    MPI_Recv(receive_buffer_matrix.data(), receive_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+
+                } else {
+                    assert(other_process % 2 == 0);
+
+                    // Black processes receive first
+                    MPI_Recv(receive_buffer_rhs.data(), receive_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+                    MPI_Recv(receive_buffer_matrix.data(), receive_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+                    MPI_Send(send_buffer_rhs.data(), send_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+                    MPI_Send(send_buffer_matrix.data(), send_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+
+                }
+
+                for (size_t i = 0; i < receive_buffer_rhs.size(); i += 2)
+                {
+                    int dof = (int)receive_buffer_rhs[i];
+                    double rhs_value = receive_buffer_rhs[i + 1];
+                    int dof_matrix = (int)receive_buffer_matrix[i];
+                    double matrix_value = receive_buffer_matrix[i + 1];
+                    
+                    if (is_red)
+                    {
+                        system_rhs.at(dof) += rhs_value;
+                        system_matrix.add(dof_matrix, dof_matrix, matrix_value);
+                    }
+                    else
+                    {
+                        system_rhs.erase(dof);
+                        system_matrix.erase({dof_matrix, dof_matrix});
+                        //solution.erase(solution.end()); // resize the solution vector
+                        solution.resize(solution.size() - 1);
+                    }
+
+                } 
+
+                if (other_process == -1)
+                    throw std::runtime_error("Other process not found");
+            }
+        }
+    }
+
+
     const size_t Poisson1D::solve()
     {
         const size_t max_iter = 1000;
         const double tol = 1e-10;
-        //return solve::parallel::cg(system_matrix, system_rhs, solution, max_iter, tol);    
-        return 10;
+        return solve::parallel::cg(system_matrix, system_rhs, solution, max_iter, tol);    
     }
 
     void Poisson1D::run()
     {
         setup_system();
         assemble_system();
+        exchange_shared();      // exchange shared dofs between processes
 
 
-        system_rhs.print();
-        
+        const size_t cg_iterations = solve();
+        std::cout << "CG iterations: " << cg_iterations << std::endl;
+
+        if (this_mpi_process == 0)
+        {
+            for (const auto &s : solution)
+                std::cout << s << " ";
+            std::cout << std::endl;
+            
+        }
+
+        // int local_size = my_global_dofs.size();
+
+        // // Gather the sizes of all local solution vectors
+        // std::vector<int> local_sizes(n_mpi_processes);
+        // MPI_Allgather(&local_size, 1, MPI_INT, local_sizes.data(), 1, MPI_INT, MPI_COMM_WORLD);
+
+        // // Calculate the total size of the global solution vector and the displacements for each local solution vector
+        // int global_size = 0;
+        // std::vector<int> displacements(n_mpi_processes);
+        // for (int i = 0; i < n_mpi_processes; ++i) {
+        //     displacements[i] = global_size;
+        //     global_size += local_sizes[i];
+        // }
+
+        // // Create a vector to hold the global solution
+        // std::vector<double> global_solution(global_size);
+
+        // // Gather all local solution vectors into the global solution vector
+        // MPI_Gatherv(solution.data(), local_size, MPI_DOUBLE, global_solution.data(), local_sizes.data(), displacements.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+
+        // if (this_mpi_process == 0)
+        // {
+        //     for (const auto &s : global_solution)
+        //         std::cout << s << " ";
+        //     std::cout << std::endl;
+
+        // }
+            
     }
 
 
@@ -310,15 +509,24 @@ namespace parallel_poisson
 
 int main(int argc, char **argv)
 {
-    //MPI::Environment env(argc, argv);
 
-    parallel_poisson::Poisson1D poisson;
+    using namespace parallel_poisson;
+
+    //MPI::Environment env(argc, argv);
+    mpi_util::MPIUtil mpi_env(argc, argv);
+    //mpi_env.init(argc, argv);
+
+    Poisson1D poisson;
+
+    //std::cout << "Rank: " << mpi_env.get_rank() << " Size: " << mpi_env.get_size() << "\n";
+    
 
     poisson.run();
 
-    poisson.mesh_info();
+    //poisson.mesh_info();
 
     //poisson.run();
+
 
     return 0;
 }
