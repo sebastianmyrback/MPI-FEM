@@ -29,11 +29,10 @@ namespace parallel_poisson
 
     private:
 
-        static const double f(const Point<1> &x);
-        static const double u(const Point<1> &x);
+        static const double f(const Point<1> &x);   // rhs function
+        static const double u(const Point<1> &x);   // exact solution
 
         MPI_Comm mpi_communicator;
-
         const std::size_t n_mpi_processes;
         const std::size_t this_mpi_process;
 
@@ -73,7 +72,6 @@ namespace parallel_poisson
 
         data_structures::parallel::SparseMatrix system_matrix;
         data_structures::parallel::Vector       system_rhs;
-        //data_structures::parallel::Vector       solution;
         std::vector<double>                     solution;
 
         
@@ -123,7 +121,8 @@ namespace parallel_poisson
         Ak.reinit(0.);
 
         // Holder for evaluations of the gradient of psi
-        data_structures::serial::DenseMatrix dpsi_vals(dofs_per_cell, dim);
+        //data_structures::serial::DenseMatrix dpsi_vals(dofs_per_cell, dim);
+        std::vector<std::vector<double>> dpsi_vals(dofs_per_cell, std::vector<double>(dim, 0.));
         
         const double measure = cell->get_measure();
 
@@ -141,7 +140,7 @@ namespace parallel_poisson
 
                     for (int dm = 0; dm < dim; dm++)     // loop over space dimensions
                     { 
-                        Ak(i, j) += qr[ipq].weight * measure * dpsi_vals(i, dm) * dpsi_vals(j, dm);
+                        Ak(i, j) += qr[ipq].weight * measure * dpsi_vals[i][dm] * dpsi_vals[j][dm];
                     }       
                 }
             }
@@ -155,7 +154,8 @@ namespace parallel_poisson
 
         fk.reinit(0.0);
 
-        Vector psi_vals(dofs_per_cell);    // container for evaluations of psi
+        //Vector psi_vals(dofs_per_cell);    // container for evaluations of psi
+        std::vector<double> psi_vals(dofs_per_cell);    // container for evaluations of psi
 
         // Get the measure of the element
         const double measure = cell->get_measure();
@@ -276,7 +276,7 @@ namespace parallel_poisson
                 compute_stiffness_on_cell(cell, Ak);      
                 compute_rhs_on_cell(cell, fk);
                 get_boundary_data(cell, loc2glb, boundary_data);    
-                utilities::parallel_dofs::distribute_local_to_global(
+                utilities::distribute_local_to_global(
                     Ak, 
                     fk,
                     system_matrix, 
@@ -501,81 +501,19 @@ namespace parallel_poisson
     {
         setup_system();
         assemble_system();
-
-        // if (this_mpi_process == 0)
-        // {
-        //     std::cout << "before exchange on process " << this_mpi_process << "\n";
-        //     system_matrix.print();
-
-        //     system_rhs.print();
-        // }
-
-        // if (this_mpi_process == 2)
-        // {
-        //     std::cout << "before exchange on process " << this_mpi_process << "\n";
-        //     system_matrix.print();
-
-        //     system_rhs.print();
-        // }
         exchange_shared();      // exchange shared dofs between processes
-
-        // if (this_mpi_process == 0)
-        // {
-        //     std::cout << "after exchange on process " << this_mpi_process << "\n";
-        //     system_matrix.print();
-
-        //     system_rhs.print();
-        // }
-        // if (this_mpi_process == 2)
-        // {
-        //     std::cout << "after exchange on process " << this_mpi_process << "\n";
-        //     system_matrix.print();
-
-        //     system_rhs.print();
-        // }
-
         const size_t cg_iterations = solve();
         std::cout << "CG iterations: " << cg_iterations << std::endl;
 
-        // if (this_mpi_process == 0)
-        // {
-        //     for (const auto &s : solution)
-        //         std::cout << s << " ";
-        //     std::cout << std::endl;
+        if (this_mpi_process == 3)
+        {
+            for (const auto &s : solution)
+                std::cout << s << " ";
+            std::cout << std::endl;
             
-        // }
+        }
 
 
-
-        // int local_size = my_global_dofs.size();
-
-        // // Gather the sizes of all local solution vectors
-        // std::vector<int> local_sizes(n_mpi_processes);
-        // MPI_Allgather(&local_size, 1, MPI_INT, local_sizes.data(), 1, MPI_INT, MPI_COMM_WORLD);
-
-        // // Calculate the total size of the global solution vector and the displacements for each local solution vector
-        // int global_size = 0;
-        // std::vector<int> displacements(n_mpi_processes);
-        // for (int i = 0; i < n_mpi_processes; ++i) {
-        //     displacements[i] = global_size;
-        //     global_size += local_sizes[i];
-        // }
-
-        // // Create a vector to hold the global solution
-        // std::vector<double> global_solution(global_size);
-
-        // // Gather all local solution vectors into the global solution vector
-        // MPI_Gatherv(solution.data(), local_size, MPI_DOUBLE, global_solution.data(), local_sizes.data(), displacements.data(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-
-        // if (this_mpi_process == 0)
-        // {
-        //     for (const auto &s : global_solution)
-        //         std::cout << s << " ";
-        //     std::cout << std::endl;
-
-        // }
-            
     }
 
 
@@ -591,20 +529,11 @@ int main(int argc, char **argv)
 
     using namespace parallel_poisson;
 
-    //MPI::Environment env(argc, argv);
     mpi_util::MPIUtil mpi_env(argc, argv);
-    //mpi_env.init(argc, argv);
 
-    Poisson1D poisson;
-
-    //std::cout << "Rank: " << mpi_env.get_rank() << " Size: " << mpi_env.get_size() << "\n";
-    
+    Poisson1D poisson;    
 
     poisson.run();
-
-    //poisson.mesh_info();
-
-    //poisson.run();
 
 
     return 0;

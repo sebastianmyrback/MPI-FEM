@@ -133,81 +133,59 @@ namespace solve
             }
 
             // print r_local and its indices
-            if (this_rank == 2)
-            {
-                for (int i = 0; i < p_local.size(); i++) {
-                    std::cout << p_local[i] << " ";
-                }
-                std::cout << "\n";
-            }
+            // if (this_rank == 3)
+            // {
+            //     for (int i = 0; i < p_local.size(); i++) {
+            //         std::cout << p_local[i] << " ";
+            //     }
+            //     std::cout << "\n";
+            // }
             
 
 
             const size_t n_per_process = r_local.size();
         
             x_local.assign(n_per_process, 0.);  // initial guess always zero
-            //assert(n_per_process == x_local.size());
 
             int n_total = 0;
             MPI_Allreduce(&n_per_process, &n_total, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
             
-            std::vector<double> Ap_local;
-            std::vector<double> p_global(n_total), recvcounts(n_per_process), displs(n_per_process);
+            std::vector<double> Ap_local, p_global(n_total);
+            std::vector<int> recvcounts(n_processes), displs(n_processes);
             double alpha = 0., beta = 0., r_dot_r_local = 0., r_dot_r_new_local = 0., p_dot_Ap_local = 0.;            
             
-            for (int iter = 0; iter < 1; iter++) 
+            int iter = 0;
+            for (iter = 0; iter < n_total; iter++)
+            //for (iter = 0; iter < 1; iter++)
             {
-                
                 r_dot_r_local = 0.0;
                 for (int i = 0; i < n_per_process; i++) {
                     r_dot_r_local += r_local[i] * r_local[i];
                 }
 
-                // Gather all elements of p from all processes
-                //MPI_Allgather(p_local.data(), n_per_process, MPI_DOUBLE, p_global.data(), n_per_process, MPI_DOUBLE, MPI_COMM_WORLD);
+                MPI_Allgather(&n_per_process, 1, MPI_INT, recvcounts.data(), 1, MPI_INT, MPI_COMM_WORLD);
 
-                // // Fill recvcounts with the sizes of the local vectors from each process
-                // MPI_Allgather(&n_per_process, 1, MPI_INT, recvcounts.data(), 1, MPI_INT, MPI_COMM_WORLD);
-
-                // // Calculate displacements for each process
-                // displs[0] = 0;
-                // for (int i = 1; i < n_per_process; ++i) {
-                //     displs[i] = displs[i - 1] + recvcounts[i - 1];
-                // }
-
-                // // Gather all local vectors into the global vector
-                // MPI_Allgatherv(p_local.data(), n_per_process, MPI_DOUBLE, p_global.data(), recvcounts.data(), displs.data(), MPI_DOUBLE, MPI_COMM_WORLD);
-
-                MPI_Gather(p_local.data(), n_per_process, MPI_DOUBLE,
-                        p_global.data(), n_per_process, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-                // Broadcast the combined vector back to all processes
-                MPI_Bcast(p_global.data(), n_total, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-                // Now, each process has the combined vector
-
-                // Print the combined vector for verification
-                if (mpi_util::this_mpi_process(mpi_communicator) == 0) {
-                    std::cout << "Combined vector:\n";
-                    for (double val : p_global) {
-                        std::cout << val << " ";
-                    }
-                    std::cout << std::endl;
+                // Calculate displacements for each process
+                displs[0] = 0;
+                for (int i = 1; i < n_processes; ++i) {
+                    displs[i] = displs[i - 1] + recvcounts[i - 1];
                 }
 
+                // Gather all local vectors p_local into the global vector p_global
+                MPI_Allgatherv(p_local.data(), n_per_process, MPI_DOUBLE, p_global.data(), recvcounts.data(), displs.data(), MPI_DOUBLE, MPI_COMM_WORLD);
+
                 Ap_local.assign(n_per_process, 0.0);
+
                 for (auto & [indices, value] : A_local) 
                 {
                     // A_local is divided into row blocks, so it contains only the local rows of A but all columns of A
                     int row = indices.first;
                     int col = indices.second;
 
-                    // find index in loc2glb that has value col
+                    // find index in loc2glb that has value row
                     const auto pos_row = std::find(loc2glb.begin(), loc2glb.end(), row);
-                    const auto pos_col = std::find(loc2glb.begin(), loc2glb.end(), col);
                     const size_t idx_row_loc = std::distance(loc2glb.begin(), pos_row);
-                    const size_t idx_col_loc = std::distance(loc2glb.begin(), pos_col); 
                     
 
                     // if (it == loc2glb.end()) {
@@ -219,18 +197,23 @@ namespace solve
                     //     throw std::invalid_argument("Local and global indices do not match");
                     // }
 
-                    Ap_local[idx_row_loc] += value * p_global[idx_col_loc];
+                    // if (this_rank == 1)
+                    //     std::cout << "n_per_process = " << n_per_process <<  " (" << row << ", " << col << ") = " << value << ", p_global[" << col << "] = " << p_global[col] << "\n";
 
-                    //std::cout << "(" << row << ", " << col << ") = " << value << ", idx_row = " << idx_row_loc << ", p_local[" << idx_col_loc << "] = " << p_local[idx_col_loc] << "\n";
+                    //Ap_local[idx_row_loc] += value * p_global[idx_col_loc];
+                    Ap_local[idx_row_loc] += value * p_global[col];
+
+                    
                 }
 
-                // // Compute A*p for the local rows of A
-                // //std::vector<double> Ap_local(n_per_process, 0.0);
-                // for (int i = 0; i < n_per_process; i++) {
-                //     for (int j = 0; j < n_total; j++) {
-                //         Ap_local[i] += A_local[i][j] * p_global[j];
+                // if (this_rank == 3)
+                // {
+                //     for (int i = 0; i < Ap_local.size(); i++) {
+                //         std::cout << Ap_local[i] << " ";
                 //     }
+                //     std::cout << "\n";
                 // }
+
 
                 p_dot_Ap_local = 0.0;
                 for (int i = 0; i < n_per_process; i++) {
@@ -256,6 +239,9 @@ namespace solve
                 double r_dot_r_new = 0.0;
                 MPI_Allreduce(&r_dot_r_new_local, &r_dot_r_new, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
+                if (this_rank == 0)
+                    std::cout << "Residual : " << r_dot_r_new << "\n";
+
                 if (r_dot_r_new < tol) {
 
                     return iter;
@@ -271,7 +257,7 @@ namespace solve
 
             }
 
-            return max_iter;
+            return iter;
 
         }
     }
