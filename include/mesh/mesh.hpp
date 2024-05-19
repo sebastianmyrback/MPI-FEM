@@ -4,6 +4,7 @@
 #include <array>
 #include <set>
 #include <map>
+#include <unordered_set>
 #include <iostream>
 #include <algorithm>
 #include <assert.h>
@@ -180,6 +181,7 @@ public:
 struct Mesh1D : public Mesh<1> {
 
     Mesh1D(const double a, const double b, const int n);
+    Mesh1D(const double a, const double b, const int n, const size_t n_mpi_processes);
     void refine_mesh() override;
     void partition(const size_t n_mpi_processes) override;
     void distribute_dofs();

@@ -28,9 +28,9 @@ namespace mpi_util
             throw std::runtime_error("Error initializing MPI");
         }
 
-        // mpi_communicator = MPI_COMM_WORLD;
-        // MPI_Comm_rank(mpi_communicator, &mpi_rank);
-        // MPI_Comm_size(mpi_communicator, &mpi_size);
+        mpi_communicator = MPI_COMM_WORLD;
+        MPI_Comm_rank(mpi_communicator, &mpi_rank);
+        MPI_Comm_size(mpi_communicator, &mpi_size);
     }
 
     void MPIUtil::finalize()

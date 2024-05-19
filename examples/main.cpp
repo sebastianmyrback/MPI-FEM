@@ -1,139 +1,132 @@
-#include <iostream>
-#include "fe/fem.hpp"
-#include "utilities/export.hpp"
-#include "utilities/norm.hpp"
-#include "solve/cg.hpp"
-#include "mpi.h"
+#include "../include/poisson.hpp"
+#include "../include/utilities/mpi_util.hpp"
 
 #include <chrono>
 
-// #include "matplotlibcpp.h"
-// namespace plt = matplotlibcpp;
+//#define PARALLEL
+#define SERIAL
 
+int main(int argc, char **argv)
+{
 
+    #ifdef PARALLEL
+    using namespace parallel_poisson;
+    mpi_util::MPIUtil mpi_env(argc, argv);
+    const int this_mpi_process = mpi_env.get_rank();
+    const int n_mpi_processes  = mpi_env.get_size();
+    #else
+    const int this_mpi_process = 0;
+    using namespace serial_poisson;
+    #endif
 
-
-// define a function to be used as a source term f(x) = 8*pi^2*sin(2*pi*x)
-const double f(const Point<1> & x) {
-    //return 8.0 * M_PI * M_PI * sin(2.0 * M_PI * x[0]);
-    return (M_PI*M_PI*(361*cos((19*M_PI*x[0])/10) - 441*cos((21*M_PI*x[0])/10)))/100;
-}
-
-const double u(const Point<1> & x) {
-    //return 2*sin(2.0 * M_PI * x[0]);
-    return 2*sin(2*M_PI*x[0])*sin(M_PI*x[0]/10) + 10;
-}
-
-
-int main() {
-
-    using namespace quadrature;
-    auto start = std::chrono::high_resolution_clock::now();
-
-    // Create a mesh object
-    const int n_refinements = 1;
-    int n = 10;     // number of elements
-    const int n_threads = 1;
-    //const double a = -0.63, b = 5.27;
     const double a = 0., b = 1.;
+    //const int nintervals = 1000000;
+    const int nintervals = 10;
+
+    // Start timer
+    #ifdef PARALLEL
+    double start = MPI_Wtime();
+
+    Poisson1D poisson(a, b, nintervals);    
+    double end_constructor = MPI_Wtime();
+    double start_setup = MPI_Wtime();
+
+    poisson.setup_system();
+
+    double end_setup = MPI_Wtime();
+    double start_assemble = MPI_Wtime();
     
-    std::vector<double> l2_errors(n_refinements, 0.), h1_errors(n_refinements, 0.), mesh_sizes(n_refinements, 0.), mesh_sizes_sq(n_refinements, 0.);
-    data_structures::serial::Vector mesh_vertices, uh, uexact, diff;
+    poisson.assemble_system();
+    
+    double end_assemble = MPI_Wtime();
+    double start_exchange = MPI_Wtime();
+    
+    poisson.exchange_shared();
+    
+    double end_exchange = MPI_Wtime();
+    double start_solve = MPI_Wtime();
+    
+    const size_t n_iterations = poisson.solve();
 
-    for (int i = 0; i < n_refinements; i++) {
+    if (this_mpi_process == 0)
+        std::cout << "Number of CG iterations: " << n_iterations << std::endl;
+    
+    double end_solve = MPI_Wtime();
+    double start_output = MPI_Wtime();
+    
+    poisson.output_solution("solution");
+    
+    double end_output = MPI_Wtime();
+    double end = MPI_Wtime();
 
-        std::cout << i + 1 << " / " << n_refinements << std::endl;
-        
-        P1Lagrange1D<1> psi;
-        const Mesh1D Th(a, b, n);
-        //FEM<Mesh1D> prob(n_threads, std::make_shared<Mesh1D>(Th));
-        FEM<Mesh1D> prob(n_threads, &Th);
+    double elapsed_time_total = end - start;
+    double elapsed_time_contrudctor = end_constructor - start;
+    double elapsed_time_setup = end_setup - start_setup;
+    double elapsed_time_assemble = end_assemble - start_assemble;
+    double elapsed_time_exchange = end_exchange - start_exchange;
+    double elapsed_time_solve = end_solve - start_solve;
+    double elapsed_time_output = end_output - start_output;
 
-        mesh_sizes[i] = Th.get_h();
-        
-        mesh_vertices.assign(Th.get_nverts(), 0.);
-        uh.assign(Th.get_nverts(), 0.);
-        uexact.assign(Th.get_nverts(), 0.);
-        diff.assign(Th.get_nverts(), 0.);
-        
+    double max_time_constructor, max_time_setup, max_time_assemble, max_time_exchange, max_time_solve, max_time_output, max_time;
 
-        for (int v = 0; v < Th.get_nverts(); v++) {
-            mesh_vertices[v] = Th.get_vertices()[v][0];
-            uexact[v] = u(Th.get_vertices()[v]);
-        }
-
-        utilities::DirichletBC<1> bc;
-        bc.g = u;
-        bc.lbs = {1, 2};
-        bc.set_dirichlet = true;
-
-        prob.assemble_stiffness_system(midpoint, psi, f, bc);
-
-        const double tol = 1e-10;
-        const int max_iter = 1000;
-
-        const int cg_iterations = solve::serial::cg(prob.mat, prob.rhs, uh, max_iter, tol);
-
-        diff = uexact - uh;
-
-        std::cout << "CG iterations: " << cg_iterations << std::endl;
-
-        // Compute the L2 and H1 errors
-        l2_errors[i] = L2H1norm(Th, gauss_lobatto6, psi, diff, 1., 0.);
-        h1_errors[i] = L2H1norm(Th, gauss_lobatto6, psi, diff, 0., 1.);
-
-        n *= 2;
-
-        //gnuplot::write_cells(Th, "Th.dat");
-
-        matlab::save(prob.mat, "matrix.dat");
-        matlab::save(prob.rhs, "rhs.dat");
-        matlab::save(mesh_vertices, "x.dat");
-        matlab::save(uh, "uh.dat");
-
+    MPI_Reduce(&elapsed_time_contrudctor, &max_time_constructor, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&elapsed_time_setup, &max_time_setup, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&elapsed_time_assemble, &max_time_assemble, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&elapsed_time_exchange, &max_time_exchange, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&elapsed_time_solve, &max_time_solve, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&elapsed_time_output, &max_time_output, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&elapsed_time_total, &max_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    if (this_mpi_process == 0) {
+        std::cout << "Elapsed total time: " << max_time << " s" << std::endl;
+        std::cout << "Constructor time: " << max_time_constructor << " s" << std::endl;
+        std::cout << "Setup time: " << max_time_setup << " s" << std::endl;
+        std::cout << "Assemble time: " << max_time_assemble << " s" << std::endl;
+        std::cout << "Exchange time: " << max_time_exchange << " s" << std::endl;
+        std::cout << "Solve time: " << max_time_solve << " s" << std::endl;
+        std::cout << "Output time: " << max_time_output << " s" << std::endl;
     }
+    #else
+    auto start = std::chrono::high_resolution_clock::now();
+    Poisson1D poisson(a, b, nintervals);    
+    auto end_constructor = std::chrono::high_resolution_clock::now();
+    auto start_setup = std::chrono::high_resolution_clock::now();
 
+    poisson.setup_system();
+    
+    auto end_setup = std::chrono::high_resolution_clock::now();
+    auto start_assemble = std::chrono::high_resolution_clock::now();
 
-    std::cout << "Mesh sizes: ";
-    for (int i = 0; i < n_refinements; i++) {
-        std::cout << mesh_sizes[i] << " ";
+    poisson.assemble_system();
 
-        mesh_sizes_sq[i] = 10 * mesh_sizes[i] * mesh_sizes[i];
-        mesh_sizes[i] *= 10;
-    }
-    std::cout << std::endl;
+    auto end_assemble = std::chrono::high_resolution_clock::now();
+    auto start_solve = std::chrono::high_resolution_clock::now();
 
-    std::cout << "L2 errors: ";
-    for (auto & e : l2_errors) {
-        std::cout << e << " ";
-    }
-    std::cout << std::endl;
+    const size_t n_iterations = poisson.solve();
+    std::cout << "Number of CG iterations: " << n_iterations << std::endl;
 
-    std::cout << "H1 errors: ";
-    for (auto & e : h1_errors) {
-        std::cout << e << " ";
-    }
-    std::cout << std::endl;
+    auto end_solve = std::chrono::high_resolution_clock::now();
+    auto start_output = std::chrono::high_resolution_clock::now();
 
+    poisson.output_solution("solution");
 
-    auto stop = std::chrono::high_resolution_clock::now();
+    auto end_output = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::high_resolution_clock::now();
 
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    std::cout << "Elapsed time: " <<  duration.count() << " [ms]" << std::endl;
+    // std::cout << "Elapsed total time: " << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << " s" << std::endl;
+    // std::cout << "Constructor time: " << std::chrono::duration_cast<std::chrono::seconds>(end_constructor - start).count() << " s" << std::endl;
+    // std::cout << "Setup time: " << std::chrono::duration_cast<std::chrono::seconds>(end_setup - start_setup).count() << " s" << std::endl;
+    // std::cout << "Assemble time: " << std::chrono::duration_cast<std::chrono::seconds>(end_assemble - start_assemble).count() << " s" << std::endl;
+    // std::cout << "Solve time: " << std::chrono::duration_cast<std::chrono::seconds>(end_solve - start_solve).count() << " s" << std::endl;
+    // std::cout << "Output time: " << std::chrono::duration_cast<std::chrono::seconds>(end_output - start_output).count() << " s" << std::endl;
 
+    std::cout << "Elapsed total time: " << std::chrono::duration<double>(end - start).count() << " s" << std::endl;
+    std::cout << "Constructor time: " << std::chrono::duration<double>(end_constructor - start).count() << " s" << std::endl;
+    std::cout << "Setup time: " << std::chrono::duration<double>(end_setup - start_setup).count() << " s" << std::endl;
+    std::cout << "Assemble time: " << std::chrono::duration<double>(end_assemble - start_assemble).count() << " s" << std::endl;
+    std::cout << "Solve time: " << std::chrono::duration<double>(end_solve - start_solve).count() << " s" << std::endl;
+    std::cout << "Output time: " << std::chrono::duration<double>(end_output - start_output).count() << " s" << std::endl;
 
-    // plt::plot(mesh_vertices, uh, "*", {{"label", "uh"}});
-    // plt::plot(mesh_vertices, uexact, {{"label", "u exact"}});
-    // plt::legend();
-    // plt::show();
-
-    // plt::loglog(mesh_sizes, mesh_sizes_sq, {{"label", "h^2"}});
-    // plt::loglog(mesh_sizes, mesh_sizes, {{"label", "h"}});
-    // plt::loglog(mesh_sizes, l2_errors, "*", {{"label", "L2 error"}});
-    // plt::loglog(mesh_sizes, h1_errors, "^", {{"label", "H1 error"}});
-    // plt::legend();
-    // plt::show();
-
+    #endif
 
     return 0;
 }
