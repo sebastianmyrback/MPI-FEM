@@ -292,9 +292,8 @@ namespace parallel_poisson
 
             // Loop over dofs
             for (int i = 0; i < dofs_per_cell; i++) 
-            {
                 fk[i] += qr[ipq].weight * measure * f(x) * psi_vals[i];
-            }
+            
 
         }
 
@@ -306,15 +305,10 @@ namespace parallel_poisson
         std::map<int, double> &boundary_data)
     {
         for (int i = 0; i < loc2glb.size(); i++) 
-        {
-            if (bc.set_dirichlet) 
-            {
-                // Add data if dof is a boundary dof
+            if (bc.set_dirichlet)     
                 if (std::find(bc.lbs.begin(), bc.lbs.end(), cell->vertex(i).boundary_label()) != bc.lbs.end())
                     boundary_data.emplace(cell->vertex(i).global_index(), bc.g(cell->vertex(i)));       
-            }
-        }
-
+            
     }
 
     void Poisson1D::setup_system()

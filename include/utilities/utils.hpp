@@ -71,7 +71,6 @@ namespace utilities
                 }
 
                 // Add local matrix entry to global matrix
-                //system_matrix[std::make_pair(loc2glb[i], loc2glb[j])] += Ak(i, j);
                 system_matrix.add(loc2glb[i], loc2glb[j], Ak(i, j));
                 
             }

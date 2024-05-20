@@ -186,9 +186,6 @@ struct Mesh1D : public Mesh<1> {
     void partition(const size_t n_mpi_processes) override;
     void distribute_dofs();
     
-    // const std::vector<std::vector<size_t>> &get_distribution() override;  
-    // const std::map<int, std::set<int>> &get_shared_dofs() override;
-
     const std::vector<std::vector<size_t>> &get_distribution() {return dof_distribution;}
     const std::map<int, std::set<int>> &get_shared_dofs() {return shared_dofs;}
 

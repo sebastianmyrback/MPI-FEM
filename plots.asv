@@ -67,14 +67,12 @@ u_vals = u(x);
 plot(x, u_vals, 'Color', 'black');
 colormap(parula(5));
 markers = ['^', 'o', 's', '*', 'p'];
-legend('Exact solution', 'FontSize', 15)
+
 for i=1:5
 hold on;
 
-plot(xs{i}, ucgs{i}, markers(i), 'MarkerSize', 12, 'DisplayName',strcat('Rank: ',num2str(i-1)))
-%legend('Numerical solution, rank' + num2str(i), 'FontSize', 15)
+plot(xs{i}, ucgs{i}, markers(i), 'MarkerSize', 12, 'Legend')
 end
-
 xlabel('x', 'FontSize', 20)
 ylabel('Solution', 'Fontsize', 20)
 %norm(u_vals' - ucg)
