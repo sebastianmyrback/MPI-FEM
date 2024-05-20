@@ -40,8 +40,8 @@ namespace parallel_poisson
         static const double u(const Point<1> &x);   // exact solution
 
         MPI_Comm mpi_communicator;
-        const std::size_t n_mpi_processes;
-        const std::size_t this_mpi_process;
+        const size_t n_mpi_processes;
+        const size_t this_mpi_process;
 
         Mesh1D                              mesh;
         const quadrature::QuadratureRule<1> qr;

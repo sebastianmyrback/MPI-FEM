@@ -9,38 +9,29 @@
 int main(int argc, char **argv)
 {
 
-    #ifdef PARALLEL
-    using namespace parallel_poisson;
-    mpi_util::MPIUtil mpi_env(argc, argv);
-    const int this_mpi_process = mpi_env.get_rank();
-    const int n_mpi_processes  = mpi_env.get_size();
-    #else
-    const int this_mpi_process = 0;
-    using namespace serial_poisson;
-    #endif
-
     const double a = 0., b = 1.;
-    const int nintervals = 1e4;
-    //const int nintervals = 10;
+    const int nintervals = 5e4;
+    //const int nintervals = 100;
 
     // Start timer
     #ifdef PARALLEL
+
+    using namespace parallel_poisson;
+    
+    mpi_util::MPIUtil mpi_env(argc, argv);
+    const int this_mpi_process = mpi_env.get_rank();
+    const int n_mpi_processes  = mpi_env.get_size();
+
     double start = MPI_Wtime();
 
     Poisson1D poisson(a, b, nintervals);    
-    
     poisson.setup_system();
-
     poisson.assemble_system();
-        
     poisson.exchange_shared();
     
     double end_assemble = MPI_Wtime();
     
-    const size_t n_iterations = poisson.solve();
-
-    //if (this_mpi_process == 0)
-      //std::cout << "Number of CG iterations: " << n_iterations << std::endl;
+    poisson.solve();
     
     double end_solve = MPI_Wtime();
     
@@ -66,30 +57,23 @@ int main(int argc, char **argv)
         std::cout << "Output time: " << max_time_output << " s" << std::endl;
     }
     #else
+    using namespace serial_poisson;
+
     auto start = std::chrono::high_resolution_clock::now();
+    
     Poisson1D poisson(a, b, nintervals);    
-   
     poisson.setup_system();
-   
     poisson.assemble_system();
 
     auto end_assemble = std::chrono::high_resolution_clock::now();
     
-    const size_t n_iterations = poisson.solve();
-    //std::cout << "Number of CG iterations: " << n_iterations << std::endl;
+    poisson.solve();
 
     auto end_solve = std::chrono::high_resolution_clock::now();
    
     poisson.output_solution("solution");
 
     auto end = std::chrono::high_resolution_clock::now();
-
-    // std::cout << "Elapsed total time: " << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << " s" << std::endl;
-    // std::cout << "Constructor time: " << std::chrono::duration_cast<std::chrono::seconds>(end_constructor - start).count() << " s" << std::endl;
-    // std::cout << "Setup time: " << std::chrono::duration_cast<std::chrono::seconds>(end_setup - start_setup).count() << " s" << std::endl;
-    // std::cout << "Assemble time: " << std::chrono::duration_cast<std::chrono::seconds>(end_assemble - start_assemble).count() << " s" << std::endl;
-    // std::cout << "Solve time: " << std::chrono::duration_cast<std::chrono::seconds>(end_solve - start_solve).count() << " s" << std::endl;
-    // std::cout << "Output time: " << std::chrono::duration_cast<std::chrono::seconds>(end_output - start_output).count() << " s" << std::endl;
 
     std::cout << "Elapsed total time: " << std::chrono::duration<double>(end - start).count() << " s" << std::endl;
      std::cout << "Assemble time: " << std::chrono::duration<double>(end_assemble - start).count() << " s" << std::endl;

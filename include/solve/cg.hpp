@@ -82,8 +82,8 @@ namespace solve
                 
                 //r_dot_r_new = r.dot(r);
 
-                if (r_dot_r_new < tol) {
-		  std::cout << "Residual after " << iter << " iterations: " << r_dot_r_new << "\n";
+                if (std::sqrt(r_dot_r_new) < tol) {
+		            std::cout << "Residual after " << iter << " iterations: " << std::sqrt(r_dot_r_new) << "\n";
 
                     return iter;
                 }
@@ -99,7 +99,7 @@ namespace solve
 
             }
 
-	    std::cout << "Residual after " << iter << " iterations (max): " << r_dot_r_new << "\n";
+	        std::cout << "Residual after " << iter-1 << " iterations (max): " << std::sqrt(r_dot_r_new) << "\n";
 
             return iter;
 
@@ -111,8 +111,8 @@ namespace solve
     {
         const size_t cg(
             const data_structures::parallel::SparseMatrix &A_local,    // system matrix
-            const data_structures::parallel::Vector &b_local,    // right-hand side
-            std::vector<double> &x_local,          // solution vector
+            const data_structures::parallel::Vector &b_local,          // right-hand side
+            std::vector<double> &x_local,                              // solution vector 
             const int max_iter, 
             const double tol,
             MPI_Comm mpi_communicator) 
@@ -133,34 +133,34 @@ namespace solve
                 loc2glb[indices] = i++;
             }
 
-            const size_t n_per_process = r_local.size();
-            x_local.assign(n_per_process, 0.);  // initial guess always zero
+            const size_t n_local = r_local.size();  // number of rows for current process
+            x_local.assign(n_local, 0.);            // initial guess always zero
 
             int n_total = 0;
-            MPI_Allreduce(&n_per_process, &n_total, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&n_local, &n_total, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-            std::vector<double> Ap_local, p_global(n_total);
+            // Gather the number of elements per process and their relative position to the global vector
             std::vector<int> recvcounts(n_processes), displs(n_processes);
+            MPI_Allgather(&n_local, 1, MPI_INT, recvcounts.data(), 1, MPI_INT, MPI_COMM_WORLD);
+            displs[0] = 0;
+            for (int i = 1; i < n_processes; ++i) {
+                displs[i] = displs[i - 1] + recvcounts[i - 1];
+            }
+            
+            std::vector<double> Ap_local(n_local), p_global(n_total);
             double alpha = 0., beta = 0., r_dot_r_local = 0., r_dot_r_new_local = 0., p_dot_Ap_local = 0., r_dot_r_new = 0.;            
 
             int iter = 0;
             for (iter = 0; iter < n_total; iter++)
             {
                 r_dot_r_local = 0.0;
-                for (int i = 0; i < n_per_process; i++) {
+                for (int i = 0; i < n_local; i++) {
                     r_dot_r_local += r_local[i] * r_local[i];
                 }
 
-                MPI_Allgather(&n_per_process, 1, MPI_INT, recvcounts.data(), 1, MPI_INT, MPI_COMM_WORLD);
+                MPI_Allgatherv(p_local.data(), n_local, MPI_DOUBLE, p_global.data(), recvcounts.data(), displs.data(), MPI_DOUBLE, MPI_COMM_WORLD);
 
-                displs[0] = 0;
-                for (int i = 1; i < n_processes; ++i) {
-                    displs[i] = displs[i - 1] + recvcounts[i - 1];
-                }
-
-                MPI_Allgatherv(p_local.data(), n_per_process, MPI_DOUBLE, p_global.data(), recvcounts.data(), displs.data(), MPI_DOUBLE, MPI_COMM_WORLD);
-
-                Ap_local.assign(n_per_process, 0.0);
+                Ap_local.assign(n_local, 0.0);
 
                 for (auto & [indices, value] : A_local) 
                 {
@@ -176,7 +176,7 @@ namespace solve
                 }
 
                 p_dot_Ap_local = 0.0;
-                for (int i = 0; i < n_per_process; i++) {
+                for (int i = 0; i < n_local; i++) {
                     p_dot_Ap_local += p_local[i] * Ap_local[i];
                 }
 
@@ -189,35 +189,38 @@ namespace solve
 
                 alpha = r_dot_r / p_dot_Ap;
 
-                for (int i = 0; i < n_per_process; i++) {
+                for (int i = 0; i < n_local; i++) {
                     x_local[i] += alpha * p_local[i];
                     r_local[i] -= alpha * Ap_local[i];
                 }
 
                 r_dot_r_new_local = 0.0;
-                for (int i = 0; i < n_per_process; i++) {
+                for (int i = 0; i < n_local; i++) {
                     r_dot_r_new_local += r_local[i] * r_local[i];
                 }
 
                 r_dot_r_new = 0.0;
                 MPI_Allreduce(&r_dot_r_new_local, &r_dot_r_new, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-                if (r_dot_r_new < tol) {
-		  if (this_rank == 0)
-		    std::cout << "Final residual after " << iter << " iterations: " << r_dot_r_new << "\n";
-		  return iter;
+                // if (this_rank == 0)
+                //     std::cout << "Iteration " << iter << ": Residual: " << std::sqrt(r_dot_r_new) << "\n";
+
+                if (std::sqrt(r_dot_r_new) < tol) {
+		            if (this_rank == 0)
+            		    std::cout << "Final residual after " << iter << " iterations: " << std::sqrt(r_dot_r_new) << "\n";
+		            return iter;
                 }
 
                 beta = r_dot_r_new / r_dot_r;
 
-                for (int i = 0; i < n_per_process; i++) {
+                for (int i = 0; i < n_local; i++) {
                     p_local[i] = r_local[i] + beta * p_local[i];
                 }
 
             }
 
 	    if (this_rank == 0)
-	      std::cout << "Final residual after " << iter << " iterations (max): " << r_dot_r_new << "\n";
+	        std::cout << "Final residual after " << iter-1 << " iterations (max): " << std::sqrt(r_dot_r_new) << "\n";
             return iter;
         }
     }

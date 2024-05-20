@@ -373,6 +373,84 @@ namespace parallel_poisson
 
     }
 
+    // void Poisson1D::exchange_shared()
+    // {
+    //     // Use a red-black coloring scheme to exchange shared dofs between processes
+    //     // note: this algorithm assumes that maximally two processes share one dofs
+
+    //     bool is_red = this_mpi_process % 2 == 0;
+
+    //     for (const auto &dof : shared_dofs)
+    //     {
+    //         if (dof.second.size() > 1)
+    //         {
+
+    //             std::vector<double> send_buffer_rhs, send_buffer_matrix, receive_buffer_rhs, receive_buffer_matrix;
+
+    //             const bool i_share_this_dof = dof.second.find(this_mpi_process) != dof.second.end();
+                
+    //             if (!i_share_this_dof)
+    //                 continue;
+                
+    //             send_buffer_rhs.push_back(dof.first);
+    //             send_buffer_rhs.push_back(system_rhs.at(dof.first));
+    //             send_buffer_matrix.push_back(system_matrix.at({dof.first, dof.first}));
+    //             send_buffer_matrix.push_back(system_matrix.at({dof.first, dof.first + 1 - 2 * (dof.first > my_global_dofs[0])}));    // send the off-diagonal entry 
+
+    //             receive_buffer_rhs.resize(send_buffer_rhs.size());
+    //             receive_buffer_matrix.resize(send_buffer_matrix.size());
+
+    //             int other_process = -1;
+    //             if (this_mpi_process == *dof.second.begin())
+    //                 other_process = *std::prev(dof.second.end());
+    //             else
+    //                 other_process = *dof.second.begin();
+
+    //             if (is_red) {
+    //                 assert(other_process % 2 != 0);
+
+    //                 // Red processes send first
+    //                 MPI_Send(send_buffer_rhs.data(), send_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+    //                 MPI_Send(send_buffer_matrix.data(), send_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+    //                 MPI_Recv(receive_buffer_rhs.data(), receive_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+    //                 MPI_Recv(receive_buffer_matrix.data(), receive_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+
+    //             } else {
+    //                 assert(other_process % 2 == 0);
+
+    //                 // Black processes receive first
+    //                 MPI_Recv(receive_buffer_rhs.data(), receive_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+    //                 MPI_Recv(receive_buffer_matrix.data(), receive_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
+    //                 MPI_Send(send_buffer_rhs.data(), send_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+    //                 MPI_Send(send_buffer_matrix.data(), send_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
+
+    //             }
+
+    //             for (size_t i = 0; i < receive_buffer_rhs.size(); i += 2)
+    //             {
+    //                 int dof = (int)receive_buffer_rhs[i];
+    //                 double rhs_value = receive_buffer_rhs[i + 1];
+    //                 double matrix_value = receive_buffer_matrix[i];
+    //                 double matrix_value_next = receive_buffer_matrix[i + 1];
+                    
+    //                 if (is_red)
+    //                 {
+    //                     system_rhs.at(dof) += rhs_value;
+    //                     system_matrix.add(dof, dof, matrix_value);
+    //                     system_matrix.add(dof, dof + 1 - 2 * (dof <= my_global_dofs[0]), matrix_value_next);
+    //                 }
+    //                 else
+    //                 {
+    //                     system_rhs.erase(dof);
+    //                     system_matrix.erase({dof, dof});
+    //                     system_matrix.erase({dof, dof + 1 - 2 * (dof > my_global_dofs[0])});
+    //                 }
+
+    //             } 
+    //         }
+    //     }
+    // }
+
     void Poisson1D::exchange_shared()
     {
         // Use a red-black coloring scheme to exchange shared dofs between processes
@@ -384,7 +462,6 @@ namespace parallel_poisson
         {
             if (dof.second.size() > 1)
             {
-
                 std::vector<double> send_buffer_rhs, send_buffer_matrix, receive_buffer_rhs, receive_buffer_matrix;
 
                 const bool i_share_this_dof = dof.second.find(this_mpi_process) != dof.second.end();
@@ -392,8 +469,6 @@ namespace parallel_poisson
                 if (!i_share_this_dof)
                     continue;
                 
-
-
                 send_buffer_rhs.push_back(dof.first);
                 send_buffer_rhs.push_back(system_rhs.at(dof.first));
                 send_buffer_matrix.push_back(system_matrix.at({dof.first, dof.first}));
@@ -408,26 +483,13 @@ namespace parallel_poisson
                 else
                     other_process = *dof.second.begin();
 
-                if (is_red) {
+                MPI_Sendrecv(send_buffer_rhs.data(), send_buffer_rhs.size(), MPI_DOUBLE, other_process, 0,
+                            receive_buffer_rhs.data(), receive_buffer_rhs.size(), MPI_DOUBLE, other_process, 0,
+                            mpi_communicator, MPI_STATUS_IGNORE);
 
-                    assert(other_process % 2 != 0);
-
-                    // Red processes send first
-                    MPI_Send(send_buffer_rhs.data(), send_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
-                    MPI_Send(send_buffer_matrix.data(), send_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
-                    MPI_Recv(receive_buffer_rhs.data(), receive_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
-                    MPI_Recv(receive_buffer_matrix.data(), receive_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
-
-                } else {
-                    assert(other_process % 2 == 0);
-
-                    // Black processes receive first
-                    MPI_Recv(receive_buffer_rhs.data(), receive_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
-                    MPI_Recv(receive_buffer_matrix.data(), receive_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator, MPI_STATUS_IGNORE);
-                    MPI_Send(send_buffer_rhs.data(), send_buffer_rhs.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
-                    MPI_Send(send_buffer_matrix.data(), send_buffer_matrix.size(), MPI_DOUBLE, other_process, 0, mpi_communicator);
-
-                }
+                MPI_Sendrecv(send_buffer_matrix.data(), send_buffer_matrix.size(), MPI_DOUBLE, other_process, 0,
+                            receive_buffer_matrix.data(), receive_buffer_matrix.size(), MPI_DOUBLE, other_process, 0,
+                            mpi_communicator, MPI_STATUS_IGNORE);
 
                 for (size_t i = 0; i < receive_buffer_rhs.size(); i += 2)
                 {
@@ -448,20 +510,15 @@ namespace parallel_poisson
                         system_matrix.erase({dof, dof});
                         system_matrix.erase({dof, dof + 1 - 2 * (dof > my_global_dofs[0])});
                     }
-
                 } 
-
-                if (other_process == -1)
-                    throw std::runtime_error("Other process not found");
             }
         }
     }
 
-
     const size_t Poisson1D::solve()
     {
-        const size_t max_iter = 1000;
-        const double tol = 1e-10;
+        const size_t max_iter = 1000;   // not used atm
+        const double tol = 1e-5;
         return solve::parallel::cg(system_matrix, system_rhs, solution, max_iter, tol, mpi_communicator);    
     }
 
