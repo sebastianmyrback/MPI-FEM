@@ -36,7 +36,7 @@ namespace solve
             double alpha = 0., beta = 0., r_dot_r = 0., r_dot_r_new = 0., p_dot_Ap = 0.;
 
             int iter = 0;
-            for (iter = 0; iter < max_iter; iter++) {
+            for (iter = 0; iter < n; iter++) {
                 
                 // Compute r^T*r
                 r_dot_r = 0.0;
@@ -83,6 +83,7 @@ namespace solve
                 //r_dot_r_new = r.dot(r);
 
                 if (r_dot_r_new < tol) {
+		  std::cout << "Residual after " << iter << " iterations: " << r_dot_r_new << "\n";
 
                     return iter;
                 }
@@ -97,6 +98,8 @@ namespace solve
                 //p = r + beta * p;
 
             }
+
+	    std::cout << "Residual after " << iter << " iterations (max): " << r_dot_r_new << "\n";
 
             return iter;
 
@@ -138,10 +141,10 @@ namespace solve
 
             std::vector<double> Ap_local, p_global(n_total);
             std::vector<int> recvcounts(n_processes), displs(n_processes);
-            double alpha = 0., beta = 0., r_dot_r_local = 0., r_dot_r_new_local = 0., p_dot_Ap_local = 0.;            
+            double alpha = 0., beta = 0., r_dot_r_local = 0., r_dot_r_new_local = 0., p_dot_Ap_local = 0., r_dot_r_new = 0.;            
 
             int iter = 0;
-            for (iter = 0; iter < max_iter; iter++)
+            for (iter = 0; iter < n_total; iter++)
             {
                 r_dot_r_local = 0.0;
                 for (int i = 0; i < n_per_process; i++) {
@@ -196,11 +199,13 @@ namespace solve
                     r_dot_r_new_local += r_local[i] * r_local[i];
                 }
 
-                double r_dot_r_new = 0.0;
+                r_dot_r_new = 0.0;
                 MPI_Allreduce(&r_dot_r_new_local, &r_dot_r_new, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
                 if (r_dot_r_new < tol) {
-                    return iter;
+		  if (this_rank == 0)
+		    std::cout << "Final residual after " << iter << " iterations: " << r_dot_r_new << "\n";
+		  return iter;
                 }
 
                 beta = r_dot_r_new / r_dot_r;
@@ -211,6 +216,8 @@ namespace solve
 
             }
 
+	    if (this_rank == 0)
+	      std::cout << "Final residual after " << iter << " iterations (max): " << r_dot_r_new << "\n";
             return iter;
         }
     }
